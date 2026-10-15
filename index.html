@@ -167,8 +167,8 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
   const {data,error}=await client.rpc('tokyo_read',{p_token:secret});
   if(error||!data){status('共編無法連線：'+(error?.message||'連結密鑰不正確'));return}
   revision=data.revision;connected=true;blocked=false;
-  const hasSaved=keys.some(k=>localStorage.getItem(k)!==null);
-  if(revision===0&&Object.keys(data.state||{}).length===0&&hasSaved){
+  const hasSaved=keys.some(k=>{const v=localStorage.getItem(k);return v!==null&&v!==['{}','[]','{}','{}','{}'][keys.indexOf(k)]});
+  if(revision===0&&Object.keys(data.state||{}).length===0&&hasSaved&&!localStorage.getItem('tokyo_trip_seed_prompted_v1')){localStorage.setItem('tokyo_trip_seed_prompted_v1','1');
    if(confirm('共編資料庫目前是空的。要以這台裝置的現有行程編輯、待辦與記帳初始化嗎？')){dirty=true;await pushState()}
    else{revision=-1;await pullState()}
   }else{revision=-1;await pullState()}
