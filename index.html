@@ -284,7 +284,7 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
   if(!secret){status('尚未設定共編密鑰 · 點「分享共編連結」輸入一次');return}
   if(!client)client=window.supabase.createClient(CONFIG.url,CONFIG.anonKey,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data,error}=await client.rpc('tokyo_read',{p_token:secret});
-  if(error||!data){status('共編無法連線：'+(error?.message||'連結密鑰不正確'));return}
+  if(error||!data){connected=false;status('共編無法連線：'+(error?.message||'連結密鑰不正確'));return false}
   revision=data.revision;connected=true;blocked=false;
   const hasSaved=keys.some(k=>{const v=localStorage.getItem(k);return v!==null&&v!==['{}','[]','{}','{}','{}'][keys.indexOf(k)]});
   if(revision===0&&Object.keys(data.state||{}).length===0&&hasSaved&&!localStorage.getItem('tokyo_trip_seed_prompted_v1')){localStorage.setItem('tokyo_trip_seed_prompted_v1','1');
@@ -294,11 +294,28 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
   if(!window.tokyoPoller)window.tokyoPoller=setInterval(()=>{if(document.visibilityState==='visible')pullState()},7000);
  }
  $('shareTrip').onclick=async()=>{
-  if(!configured()){alert('共編還需要先建立 Supabase 資料庫並填入公開連線設定；目前分享網址只能各自使用，無法同步。');return}
-  if(!secret){const s=prompt('請貼上 Supabase SQL 設定後產生的共編密鑰（只需一次）');if(!s)return;secret=s.trim();localStorage.setItem('tokyo_trip_share_secret_v1',secret);await connect();if(!connected)return}
-  const u=new URL(location.href);u.hash='share='+encodeURIComponent(secret);
-  try{await navigator.clipboard.writeText(u.href);alert('共編連結已複製；請只分享給同行者。任何取得完整連結的人都能修改行程。')}
-  catch{prompt('請複製共編連結：',u.href)}
+  if(!configured()){alert('目前尚未完成 Supabase 連線設定，不能分享可同步的行程。');return}
+  if(!connected){
+    const entered=prompt('請重新輸入 SQL 首次執行時顯示的 64 字元 YOUR_SHARE_LINK_SECRET（不要填 Supabase Publishable key）。密鑰只會保存在此裝置，不會公開在 GitHub。');
+    if(entered===null)return;
+    const value=entered.trim();
+    if(!/^[a-f0-9]{64}$/i.test(value)){alert('密鑰格式不正確：必須是 SQL 執行結果中的 64 字元十六進位字串。');return}
+    secret=value;
+    const {data,error}=await (client||(client=window.supabase.createClient(CONFIG.url,CONFIG.anonKey,{auth:{persistSession:false,autoRefreshToken:false}}))).rpc('tokyo_read',{p_token:secret});
+    if(error||!data){
+      connected=false;
+      status('共編密鑰驗證失敗，請確認是首次建立資料庫時產生的密鑰');
+      alert('密鑰未通過資料庫驗證，因此不會產生分享連結。請檢查是否複製完整 SQL 結果，或需要重設密鑰。');
+      return;
+    }
+    localStorage.setItem('tokyo_trip_share_secret_v1',secret);
+    await connect();
+    if(!connected)return;
+  }
+  const u=new URL(location.href);
+  u.hash='share='+encodeURIComponent(secret);
+  try{await navigator.clipboard.writeText(u.href);alert('共編連結已複製，連線驗證成功。請只分享給同行者。')}
+  catch{prompt('複製以下共編連結分享給同行者：',u.href)}
  };
  $('syncTrip').onclick=async()=>{if(!connected)await connect();else if(dirty)await pushState();else await pullState()};
  const oldRenderDay=window.renderDay;
