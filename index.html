@@ -135,6 +135,15 @@ document.getElementById("exportBtn").onclick=()=>{let data={app:"TOKYO FIELD NOT
 renderNav();renderDay();renderChecks();renderExpenses();renderStats();
 </script>
 
+<div id="tripEditor" hidden role="dialog" aria-modal="true" aria-labelledby="editorHeading">
+<div class="sheet">
+<div class="sheethead"><h2 id="editorHeading">編輯行程</h2><button class="btn" type="button" id="closeTripEditor" aria-label="關閉">✕</button></div>
+<label for="sheetTime">時間</label><input id="sheetTime" placeholder="例如：15:30">
+<label for="sheetTitle">景點名稱</label><input id="sheetTitle" placeholder="景點名稱">
+<label for="sheetURL">地圖／資訊網址</label><input id="sheetURL" placeholder="https://...">
+<label for="sheetDesc">備註</label><textarea id="sheetDesc" placeholder="交通、集合或行程備註"></textarea>
+<div class="sheetactions"><button type="button" id="cancelTripEditor">取消</button><button class="primary" type="button" id="saveTripEditor">完成</button></div>
+</div></div>
 <script>
 (()=>{
  const TRIP='tokyo-trip-2026';
@@ -294,13 +303,5 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
 })();
 </script>
 
-<div id="tripEditor" hidden role="dialog" aria-modal="true" aria-labelledby="editorHeading">
-<div class="sheet">
-<div class="sheethead"><h2 id="editorHeading">編輯行程</h2><button class="btn" type="button" id="closeTripEditor" aria-label="關閉">✕</button></div>
-<label for="sheetTime">時間</label><input id="sheetTime" placeholder="例如：15:30">
-<label for="sheetTitle">景點名稱</label><input id="sheetTitle" placeholder="景點名稱">
-<label for="sheetURL">地圖／資訊網址</label><input id="sheetURL" placeholder="https://...">
-<label for="sheetDesc">備註</label><textarea id="sheetDesc" placeholder="交通、集合或行程備註"></textarea>
-<div class="sheetactions"><button type="button" id="cancelTripEditor">取消</button><button class="primary" type="button" id="saveTripEditor">完成</button></div>
-</div></div></body>
+</body>
 </html>
