@@ -37,14 +37,8 @@
   <div class="stat"><div class="statlabel">PREP CHECKLIST</div><strong id="checkStat">0 / 8</strong><small>出發準備進度</small></div>
   <div class="stat"><div class="statlabel">RECORDED SPEND</div><strong id="expenseStat">¥0</strong><small>已記錄日幣花費</small></div>
 </section>
-<section class="cloudpanel" id="sharedSettings">
- <div class="panelhead"><div><div class="kicker">PRIVATE TRIP SPACE</div><h2 style="margin:5px 0">共編空間與登入</h2><div class="sub">邀請制｜只有已授權成員可讀寫雲端資料</div></div><span class="tag" id="cloudBadge">尚未連線</span></div>
- <div class="cloudgrid"><div class="field"><label>Supabase Project URL</label><input id="sbUrl" placeholder="https://xxxx.supabase.co"></div><div class="field"><label>Supabase Publishable / anon key</label><input id="sbKey" placeholder="sb_publishable_… 或 anon key"></div></div>
- <div class="stopcontrols"><button class="btn primary" id="sbConnect">連接共編空間</button><button class="btn" id="sbClear">清除本機設定</button></div>
- <div class="cloudgrid" style="margin-top:12px"><div class="field"><label>登入電子郵件（必須是受邀信箱）</label><input id="sbEmail" type="email" placeholder="name@example.com"></div><div class="field"><label>登入與成員管理</label><div class="stopcontrols"><button class="btn primary" id="sbLogin" disabled>寄送登入連結</button><button class="btn" id="sbLogout" disabled>登出</button></div></div></div>
- <div class="cloudstatus" id="sbStatus">請先設定 Supabase 專案；共編功能需完成雲端資料庫設定後才能使用。</div>
- <div class="field" style="margin-top:12px"><label>邀請同行者（僅擁有者可操作）</label><div class="stopcontrols"><input id="sbInviteEmail" type="email" placeholder="friend@example.com" disabled style="max-width:360px"><button class="btn" id="sbInvite" disabled>邀請共編者</button></div></div><div class="cloudmembers" id="sbMembers"></div>
- <p class="sub">安全提醒：請只使用公開用戶端金鑰，切勿將 service_role key 放進 HTML。還需完成 SQL、Email Auth、擁有者初始授權與 HTTPS 部署。</p>
+<section class="cloudpanel" id="tripSyncBar" style="padding:14px 20px">
+<div class="panelhead"><div><div class="kicker">SHARED TRAVEL PLAN</div><div class="sub" id="syncStatus" role="status">正在準備同步功能…</div></div><div class="stopcontrols"><button class="btn primary" id="shareTrip">分享共編連結 ↗</button><button class="btn" id="syncTrip">同步</button></div></div>
 </section>
 <div class="content">
   <aside class="sidebar">
@@ -57,7 +51,7 @@
     <section class="panel" id="itinerary">
       <div class="panelhead"><div><div class="kicker" id="dayEyebrow">DAY 01 · TUESDAY</div><h2 id="dayTitle">抵達東京・城市暖身</h2><div class="sub" id="daySub">11 月 17 日｜11:00 抵達羽田機場</div></div><span class="tag" id="dayPill">東京</span></div>
       <div class="timeline" id="timeline"></div>
-      <div class="stopform"><h3>＋ 新增景點</h3><div class="stopgrid"><input id="customTime" placeholder="時間，例如 15:30"><input id="customTitle" placeholder="景點名稱（必填）"><input id="customUrl" placeholder="地圖／資訊網址（選填）"><textarea id="customDesc" rows="2" placeholder="景點備註、交通或集合提醒"></textarea></div><div class="stopcontrols"><button class="btn primary" id="addCustomStop">新增景點</button><span class="sub">可新增、編輯或刪除景點；未連線時儲存在目前裝置，設定共編後才可雲端同步。</span></div></div>
+      <div class="stopform"><h3>＋ 新增景點</h3><div class="stopgrid"><input id="customTime" placeholder="時間，例如 15:30"><input id="customTitle" placeholder="景點名稱（必填）"><input id="customUrl" placeholder="地圖／資訊網址（選填）"><textarea id="customDesc" rows="2" placeholder="景點備註、交通或集合提醒"></textarea></div><div class="stopcontrols"><button class="btn primary" id="addCustomStop">新增景點</button><span class="sub">可以直接新增、編輯與刪除景點；未設定雲端時只保存在目前裝置。</span></div></div>
       <div class="note" id="dayNote"></div>
     </section>
     <section class="panel" id="checklist">
@@ -79,7 +73,7 @@
         <div class="info-card"><strong>11/18 河口湖住宿</strong><p>四季之宿 Popura（Shiki no Yado Popura）</p><div class="links"><a class="minilink" target="_blank" rel="noopener" href="https://www.booking.com/Share-wdbJptY">住宿頁面 ↗</a><a class="minilink" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Shiki+no+Yado+Popura">地圖導航 ↗</a></div></div>
         <div class="info-card"><strong>河口湖一日遊（11/18）</strong><p>07:50 三井住友銀行新宿西口支店集合；預計 15:10 淺間公園離團，須先取得 KKday 確認。</p><div class="links"><a class="minilink" target="_blank" rel="noopener" href="https://www.kkday.com/zh-tw/product/266389-fuji-kawaguchiko-oshino-hakkai-sengen">開啟 KKday 行程 ↗</a></div></div>
         <div class="info-card"><strong>河口湖 ↔ 東京交通</strong><p>班次、乘車地點與預約規則請以官方資訊為準。</p><div class="links"><a class="minilink" target="_blank" rel="noopener" href="https://www.keikyu-bus.co.jp/zh-CHT/airport/h-kawaguhiko/index.html">京急巴士 ↗</a><a class="minilink" target="_blank" rel="noopener" href="https://bus.fujikyu.co.jp/en/highway/fujisan/tokyo/">富士急巴士 ↗</a></div></div>
-        <div class="info-card"><strong>羽田機場｜11/22 10:25 起飛</strong><p>依東京飯店位置、航空公司報到時間與航廈，提前確認首班車及路線。</p><div class="links"><a class="minilink" target="_blank" rel="noopener" href="https://www.tokyo-haneda.com/zh-CHT/access/">官方交通資訊 ↗</a></div></div>
+        <div class="info-card"><strong>羽田機場｜11/22 11:00 起飛</strong><p>依東京飯店位置、航空公司報到時間與航廈，提前確認首班車及路線。</p><div class="links"><a class="minilink" target="_blank" rel="noopener" href="https://www.tokyo-haneda.com/zh-CHT/access/">官方交通資訊 ↗</a></div></div>
         <div class="note">11/19–11/21 新宿住宿待訂，確認後可以再把飯店地址、入住資訊與導航連結補進來。</div>
       </section>
     </div>
@@ -109,25 +103,85 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
 
 <script>
 (()=>{
- const TRIP='tokyo-trip-2026'; let client=null,sessionUser=null,members=[],channel=null,applyingRemote=false;
- const $=id=>document.getElementById(id); const status=(t)=>{$('sbStatus').textContent=t};
- const savedUrl=localStorage.getItem('tn_shared_url')||'',savedKey=localStorage.getItem('tn_shared_key')||'';$('sbUrl').value=savedUrl;$('sbKey').value=savedKey;
- const isOwner=()=>!!sessionUser&&members.some(m=>m.user_id===sessionUser.id&&m.role==='owner'&&m.status==='active');
- const localMode=()=>!client;
- const canEdit=()=>localMode()||!!sessionUser&&members.some(m=>m.user_id===sessionUser.id&&m.status==='active');
- const editNotice=()=>client?'已儲存，雲端同步依連線狀態進行':'已儲存於這台裝置';
- function controls(){const ok=canEdit();$('sbInviteEmail').disabled=!isOwner();$('sbInvite').disabled=!isOwner();$('sbLogout').disabled=!sessionUser;$('sbLogin').disabled=!client||!!sessionUser;['expenseName','expenseAmount','expenseDay','addExpense'].forEach(id=>{const el=$(id);if(el)el.disabled=!ok});document.querySelectorAll('[data-check]').forEach(el=>el.disabled=!ok);const add=$('addCustomStop');if(add)add.disabled=!ok;}
- async function loadMembers(){const {data,error}=await client.from('trip_members').select('id,email,user_id,role,status').eq('trip_id',TRIP);if(error){status('讀取成員失敗：'+error.message);return}members=data||[];$('sbMembers').innerHTML=members.map(m=>`${m.email} — ${m.role==='owner'?'擁有者':m.status==='invited'?'等待接受邀請':m.status==='revoked'?'已撤銷':'共編者'} ${isOwner()&&m.role!=='owner'&&m.status!=='revoked'?`<button class="btn" data-revoke="${m.id}" style="padding:4px 8px;margin-left:6px">撤銷</button>`:''}`).join('<br>')||'尚無成員';document.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=async()=>{if(!confirm('確定撤銷這位成員的共編權限？'))return;let r=await client.from('trip_members').update({status:'revoked'}).eq('id',b.dataset.revoke).eq('trip_id',TRIP);if(r.error)status('撤銷失敗：'+r.error.message);else{status('已撤銷成員權限');await loadMembers()}});controls()}
- function currentState(){return {checks:JSON.parse(localStorage.getItem('tokyo_field_checks_v1')||'{}'),expenses:JSON.parse(localStorage.getItem('tokyo_field_expenses_v1')||'[]'),customEvents:JSON.parse(localStorage.getItem('tokyo_field_custom_events_v1')||'{}'),eventEdits:JSON.parse(localStorage.getItem('tokyo_field_event_edits_v1')||'{}'),deletedBase:JSON.parse(localStorage.getItem('tokyo_field_deleted_base_v1')||'{}')}}
- async function pushState(){if(!client||!sessionUser||applyingRemote)return;let ok=members.some(m=>m.user_id===sessionUser.id&&m.status==='active');if(!ok)return;let {error}=await client.from('trip_state').upsert({trip_id:TRIP,state:currentState(),updated_at:new Date().toISOString()},{onConflict:'trip_id'});if(error)status('雲端同步失敗：'+error.message);else $('cloudBadge').textContent='已同步'}
- async function pullState(){if(!client||!sessionUser)return;let {data,error}=await client.from('trip_state').select('state').eq('trip_id',TRIP).maybeSingle();if(error){status('讀取雲端資料失敗：'+error.message);return}if(!data){let ins=await client.from('trip_state').insert({trip_id:TRIP,state:currentState()});if(ins.error)console.warn(ins.error);return}const payload=[['tokyo_field_checks_v1',JSON.stringify(data.state?.checks||{})],['tokyo_field_expenses_v1',JSON.stringify(data.state?.expenses||[])],['tokyo_field_custom_events_v1',JSON.stringify(data.state?.customEvents||{})],['tokyo_field_event_edits_v1',JSON.stringify(data.state?.eventEdits||{})],['tokyo_field_deleted_base_v1',JSON.stringify(data.state?.deletedBase||{})]];const changed=payload.some(([k,v])=>localStorage.getItem(k)!==v);if(!changed)return;applyingRemote=true;payload.forEach(([k,v])=>localStorage.setItem(k,v));applyingRemote=false;location.reload()}
- async function afterLogin(user){sessionUser=user;await client.rpc('claim_trip_invites',{p_trip_id:TRIP});await loadMembers();let authorized=members.some(m=>m.user_id===user.id&&m.status==='active');if(!authorized){status('此信箱尚未獲邀。請旅程擁有者先邀請這個電子郵件。');$('cloudBadge').textContent='未授權';return}status('已登入：'+user.email+'。待辦與旅費會同步給其他授權成員。');$('cloudBadge').textContent='已連線';await pullState();if(channel)await client.removeChannel(channel);channel=client.channel('trip-state-'+TRIP).on('postgres_changes',{event:'*',schema:'public',table:'trip_state',filter:'trip_id=eq.'+TRIP},async()=>{await pullState()}).on('postgres_changes',{event:'*',schema:'public',table:'trip_members',filter:'trip_id=eq.'+TRIP},loadMembers).subscribe();controls()}
- $('sbConnect').onclick=async()=>{const url=$('sbUrl').value.trim().replace(/\/$/,''),key=$('sbKey').value.trim();if(!url||!key){status('請填入 Supabase Project URL 與 publishable/anon key。');return}try{client=window.supabase.createClient(url,key);localStorage.setItem('tn_shared_url',url);localStorage.setItem('tn_shared_key',key);$('sbLogin').disabled=false;$('cloudBadge').textContent='已設定';status('設定完成。請用已獲邀的信箱登入；首次使用需先執行 SQL 並設定擁有者。');const {data}=await client.auth.getSession();if(data.session)await afterLogin(data.session.user);client.auth.onAuthStateChange((event,sess)=>{if(event==='SIGNED_IN'&&sess?.user)setTimeout(()=>afterLogin(sess.user),0);if(event==='SIGNED_OUT'){sessionUser=null;members=[];controls();$('cloudBadge').textContent='已登出';status('已登出共編空間。')}})}catch(e){status('連線失敗：'+e.message)}};
- $('sbLogin').onclick=async()=>{if(!client)return;const email=$('sbEmail').value.trim();if(!email){status('請先輸入電子郵件。');return}const {error}=await client.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split('#')[0]}});status(error?'寄送失敗：'+error.message:'登入連結已寄出。請用被邀請的同一個信箱開啟信件。')};
- $('sbLogout').onclick=async()=>{if(client)await client.auth.signOut()};
- $('sbInvite').onclick=async()=>{let email=$('sbInviteEmail').value.trim().toLowerCase();if(!email||!email.includes('@')){status('請輸入有效電子郵件。');return}let {error}=await client.from('trip_members').insert({trip_id:TRIP,email,role:'editor',status:'invited'});if(error)status('邀請失敗：'+error.message);else{$('sbInviteEmail').value='';status('已加入邀請名單。對方必須用該信箱登入才能加入。');await loadMembers()}};
- // Existing app writes localStorage on every checkbox/expense change; debounce sync after those writes.
- const origSet=Storage.prototype.setItem;let timer=null;Storage.prototype.setItem=function(k,v){origSet.call(this,k,v);if((k==='tokyo_field_checks_v1'||k==='tokyo_field_expenses_v1'||k==='tokyo_field_custom_events_v1'||k==='tokyo_field_event_edits_v1'||k==='tokyo_field_deleted_base_v1')&&!applyingRemote&&client&&sessionUser){clearTimeout(timer);timer=setTimeout(pushState,450)}};
+ const TRIP='tokyo-trip-2026';
+ // Add only a Supabase Project URL and public publishable / anon key after project setup.
+ const CONFIG={url:'',anonKey:''};
+ const $=id=>document.getElementById(id);
+ const names=['checks','expenses','customEvents','eventEdits','deletedBase'];
+ const keys=['tokyo_field_checks_v1','tokyo_field_expenses_v1','tokyo_field_custom_events_v1','tokyo_field_event_edits_v1','tokyo_field_deleted_base_v1'];
+ const fallback=['{}','[]','{}','{}','{}'];
+ let client=null,secret='',revision=0,connected=false,applyingRemote=false,dirty=false,busy=false,blocked=false,syncTimer=null;
+ const status=s=>{$('syncStatus').textContent=s};
+ const configured=()=>CONFIG.url.startsWith('https://')&&!!CONFIG.anonKey&&!!window.supabase;
+ const hashSecret=new URLSearchParams(location.hash.slice(1)).get('share')||'';
+ secret=hashSecret||localStorage.getItem('tokyo_trip_share_secret_v1')||'';
+ if(hashSecret)localStorage.setItem('tokyo_trip_share_secret_v1',hashSecret);
+ const currentState=()=>Object.fromEntries(keys.map((k,i)=>{let x;try{x=JSON.parse(localStorage.getItem(k)||fallback[i])}catch{x=JSON.parse(fallback[i])}return [names[i],x]}));
+ const editNotice=()=>connected?'已儲存，正在同步…':'已儲存於目前裝置';
+ const canEdit=()=>true;
+ const isOwner=()=>false;
+ async function pushState(){
+  if(!connected||applyingRemote||!dirty||blocked||busy)return;
+  busy=true;
+  const submitted=JSON.stringify(currentState());
+  const {data,error}=await client.rpc('tokyo_write',{p_token:secret,p_state:JSON.parse(submitted),p_revision:revision});
+  busy=false;
+  if(error){
+   if((error.message||'').includes('VERSION_CONFLICT')){blocked=true;status('偵測到他人同時修改，已停止寫入；請先匯出備份，再重新整理');alert('其他人先儲存了新版本。為避免覆蓋，請先匯出本機備份，再重新整理。')}
+   else status('無法同步，已先保留本機修改：'+error.message);
+   return;
+  }
+  if(!data?.ok){status('寫入失敗，請檢查共編連結');return}
+  revision=data.revision;dirty=JSON.stringify(currentState())!==submitted;
+  status(dirty?'仍有修改待同步':'共編已同步 · 其他裝置稍後自動更新');
+  if(dirty){clearTimeout(syncTimer);syncTimer=setTimeout(pushState,700)}
+ }
+ async function pullState(){
+  if(!connected||dirty||busy||blocked)return;
+  const {data,error}=await client.rpc('tokyo_read',{p_token:secret});
+  if(error||!data){status('共編讀取失敗：'+(error?.message||'密鑰無效'));return}
+  if(data.revision===revision)return;
+  revision=data.revision;
+  const s=data.state||{};
+  const payload=keys.map((k,i)=>[k,JSON.stringify(s[names[i]]??JSON.parse(fallback[i]))]);
+  if(!payload.some(([k,v])=>localStorage.getItem(k)!==v)){status('共編已更新至最新版本');return}
+  applyingRemote=true;
+  for(const [k,v] of payload)localStorage.setItem(k,v);
+  applyingRemote=false;
+  location.reload();
+ }
+ function controls(){/* Everyone holding the secret link can edit; no login or invitations. */}
+ const origSet=Storage.prototype.setItem;
+ Storage.prototype.setItem=function(k,v){
+  origSet.call(this,k,v);
+  if(keys.includes(k)&&!applyingRemote){
+   dirty=true;
+   if(connected&&!blocked){clearTimeout(syncTimer);syncTimer=setTimeout(pushState,600)}
+   else if(!connected)status('目前只存在此裝置 · 共編尚未啟用');
+  }
+ };
+ async function connect(){
+  if(!configured()){status('本機模式 · 尚未設定 Supabase 資料庫');return}
+  if(!secret){status('尚未設定共編密鑰 · 點「分享共編連結」輸入一次');return}
+  if(!client)client=window.supabase.createClient(CONFIG.url,CONFIG.anonKey,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {data,error}=await client.rpc('tokyo_read',{p_token:secret});
+  if(error||!data){status('共編無法連線：'+(error?.message||'連結密鑰不正確'));return}
+  revision=data.revision;connected=true;blocked=false;
+  const hasSaved=keys.some(k=>localStorage.getItem(k)!==null);
+  if(revision===0&&Object.keys(data.state||{}).length===0&&hasSaved){
+   if(confirm('共編資料庫目前是空的。要以這台裝置的現有行程編輯、待辦與記帳初始化嗎？')){dirty=true;await pushState()}
+   else{revision=-1;await pullState()}
+  }else{revision=-1;await pullState()}
+  if(!window.tokyoPoller)window.tokyoPoller=setInterval(()=>{if(document.visibilityState==='visible')pullState()},7000);
+ }
+ $('shareTrip').onclick=async()=>{
+  if(!configured()){alert('共編還需要先建立 Supabase 資料庫並填入公開連線設定；目前分享網址只能各自使用，無法同步。');return}
+  if(!secret){const s=prompt('請貼上 Supabase SQL 設定後產生的共編密鑰（只需一次）');if(!s)return;secret=s.trim();localStorage.setItem('tokyo_trip_share_secret_v1',secret);await connect();if(!connected)return}
+  const u=new URL(location.href);u.hash='share='+encodeURIComponent(secret);
+  try{await navigator.clipboard.writeText(u.href);alert('共編連結已複製；請只分享給同行者。任何取得完整連結的人都能修改行程。')}
+  catch{prompt('請複製共編連結：',u.href)}
+ };
+ $('syncTrip').onclick=async()=>{if(!connected)await connect();else if(dirty)await pushState();else await pullState()};
  const oldRenderDay=window.renderDay;
  function getCustomEvents(){try{return JSON.parse(localStorage.getItem('tokyo_field_custom_events_v1')||'{}')}catch(e){return {}}}
  function getEventEdits(){try{return JSON.parse(localStorage.getItem('tokyo_field_event_edits_v1')||'{}')}catch(e){return {}}}
@@ -145,14 +199,14 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
    timeline.innerHTML=all.map(e=>`<div class="event"><div class="etime">${esc(e.time||'未定')}</div><div class="rail"><span class="dot"></span></div><div class="eventbody"><div class="eventtop"><div><h3>${esc(e.title)}</h3><p>${esc(e.desc||'')}</p></div></div>${e.url?`<div class="eventlinks"><a class="minilink" href="${safeHref(e.url)}" target="_blank" rel="noopener">開啟地圖／資訊 ↗</a></div>`:''}<div class="stopcontrols"><button class="btn" data-stopedit="${e.id}" style="padding:5px 9px;font-size:11px" ${!canEdit()?'disabled':''}>編輯</button><button class="btn" data-stopdelete="${e.id}" style="padding:5px 9px;font-size:11px;color:var(--orange)" ${!canEdit()?'disabled':''}>刪除</button></div><div class="stopedit" id="form-${e.id}" hidden><input data-time="${e.id}" value="${esc(e.time||'')}" placeholder="時間"><input data-title="${e.id}" value="${esc(e.title||'')}" placeholder="景點名稱"><input class="wide" data-url="${e.id}" value="${esc(e.url||'')}" placeholder="地圖／資訊網址"><textarea data-desc="${e.id}" rows="2" placeholder="景點備註">${esc(e.desc||'')}</textarea><div class="wide stopcontrols"><button class="btn primary" data-stopsave="${e.id}" style="padding:6px 10px;font-size:11px">儲存並同步</button><button class="btn" data-stopcancel="${e.id}" style="padding:6px 10px;font-size:11px">取消</button></div></div></div></div>`).join('');
    timeline.querySelectorAll('[data-stopedit]').forEach(b=>b.onclick=()=>{const f=$('form-'+b.dataset.stopedit);if(f)f.hidden=!f.hidden});
    timeline.querySelectorAll('[data-stopcancel]').forEach(b=>b.onclick=()=>{const f=$('form-'+b.dataset.stopcancel);if(f)f.hidden=true});
-   timeline.querySelectorAll('[data-stopsave]').forEach(b=>b.onclick=async()=>{const id=b.dataset.stopsave,title=timeline.querySelector(`[data-title="${id}"]`).value.trim();if(!title){notify('請輸入景點名稱');return}const item={time:timeline.querySelector(`[data-time="${id}"]`).value.trim()||'未定',title,desc:timeline.querySelector(`[data-desc="${id}"]`).value.trim(),url:cleanUrl(timeline.querySelector(`[data-url="${id}"]`).value.trim())};if(id.startsWith('base-')){const ev=getEventEdits();ev[date]={...(ev[date]||{}),[id]:item};localStorage.setItem('tokyo_field_event_edits_v1',JSON.stringify(ev))}else{const list=getCustomEvents(),arr=list[date]||[];arr[Number(id.slice(7))]=item;list[date]=arr;localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list))}window.renderDay();await pushState();notify(editNotice())});
-   timeline.querySelectorAll('[data-stopdelete]').forEach(b=>b.onclick=async()=>{const id=b.dataset.stopdelete;const e=all.find(x=>x.id===id);if(!confirm(`確定刪除「${e?.title||'此景點'}」？`))return;if(id.startsWith('base-')){const del=getDeletedBase();del[date]=[...(del[date]||[]),id].filter((v,i,a)=>a.indexOf(v)===i);localStorage.setItem('tokyo_field_deleted_base_v1',JSON.stringify(del))}else{const list=getCustomEvents(),arr=list[date]||[];arr.splice(Number(id.slice(7)),1);list[date]=arr;localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list))}window.renderDay();await pushState();notify(editNotice())});
+   timeline.querySelectorAll('[data-stopsave]').forEach(b=>b.onclick=async()=>{const id=b.dataset.stopsave,title=timeline.querySelector(`[data-title="${id}"]`).value.trim();if(!title){notify('請輸入景點名稱');return}const item={time:timeline.querySelector(`[data-time="${id}"]`).value.trim()||'未定',title,desc:timeline.querySelector(`[data-desc="${id}"]`).value.trim(),url:cleanUrl(timeline.querySelector(`[data-url="${id}"]`).value.trim())};if(id.startsWith('base-')){const ev=getEventEdits();ev[date]={...(ev[date]||{}),[id]:item};localStorage.setItem('tokyo_field_event_edits_v1',JSON.stringify(ev))}else{const list=getCustomEvents(),arr=list[date]||[];arr[Number(id.slice(7))]=item;list[date]=arr;localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list))}window.renderDay();notify(editNotice())});
+   timeline.querySelectorAll('[data-stopdelete]').forEach(b=>b.onclick=async()=>{const id=b.dataset.stopdelete;const e=all.find(x=>x.id===id);if(!confirm(`確定刪除「${e?.title||'此景點'}」？`))return;if(id.startsWith('base-')){const del=getDeletedBase();del[date]=[...(del[date]||[]),id].filter((v,i,a)=>a.indexOf(v)===i);localStorage.setItem('tokyo_field_deleted_base_v1',JSON.stringify(del))}else{const list=getCustomEvents(),arr=list[date]||[];arr.splice(Number(id.slice(7)),1);list[date]=arr;localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list))}window.renderDay();notify(editNotice())});
  };
  function cleanUrl(value){if(!value)return '';try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:''}catch(e){return ''}}
  function safeHref(value){return cleanUrl(value)||'#'}
- $('addCustomStop').onclick=async()=>{if(!canEdit()){notify('請先登入已授權的共編帳號');return}const title=$('customTitle').value.trim();if(!title){notify('請輸入景點／活動名稱');return}const url=cleanUrl($('customUrl').value.trim());if($('customUrl').value.trim()&&!url){notify('網址請使用 http:// 或 https://');return}const all=getCustomEvents();all[days[active].date]=all[days[active].date]||[];all[days[active].date].push({time:$('customTime').value.trim()||'未定',title,desc:$('customDesc').value.trim(),url});localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(all));$('customTime').value='';$('customTitle').value='';$('customDesc').value='';$('customUrl').value='';window.renderDay();await pushState();notify(editNotice())};
- $('sbClear').onclick=()=>{localStorage.removeItem('tn_shared_url');localStorage.removeItem('tn_shared_key');$('sbUrl').value='';$('sbKey').value='';status('已清除本機設定。');$('cloudBadge').textContent='尚未連線'};
- controls();window.renderDay();if(savedUrl&&savedKey){setTimeout(()=>$('sbConnect').click(),250)}
+ $('addCustomStop').onclick=async()=>{const title=$('customTitle').value.trim();if(!title){notify('請輸入景點／活動名稱');return}const url=cleanUrl($('customUrl').value.trim());if($('customUrl').value.trim()&&!url){notify('網址請使用 http:// 或 https://');return}const all=getCustomEvents();all[days[active].date]=all[days[active].date]||[];all[days[active].date].push({time:$('customTime').value.trim()||'未定',title,desc:$('customDesc').value.trim(),url});localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(all));$('customTime').value='';$('customTitle').value='';$('customDesc').value='';$('customUrl').value='';window.renderDay();notify(editNotice())};
+
+ controls();window.renderDay();setTimeout(connect,300);
 })();
 </script>
 
