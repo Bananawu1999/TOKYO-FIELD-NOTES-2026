@@ -15,6 +15,40 @@
 .stopform{border:1px dashed #cbd8cd;background:#fbfaf5;padding:14px;border-radius:14px;margin-top:17px}.stopform h3{font-size:13px;margin:0 0 10px}.stopgrid{display:grid;grid-template-columns:120px 1fr;gap:8px}.stopgrid input,.stopgrid textarea{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fffefa;color:var(--ink);font:inherit;font-size:12px}.stopgrid textarea{grid-column:1/-1}.stopcontrols{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.stopedit{display:grid;grid-template-columns:110px 1fr;gap:7px;background:#f7f6f0;padding:10px;border-radius:10px;margin-top:10px}.stopedit input,.stopedit textarea{width:100%;min-width:0;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;font-size:11px}.stopedit textarea,.stopedit .wide{grid-column:1/-1}.cloudpanel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin:16px 0}.cloudgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.cloudgrid input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 11px;background:#fffefa}.cloudstatus{font-size:12px;color:var(--muted);background:#f5f3eb;border-radius:10px;padding:10px;margin-top:10px;overflow-wrap:anywhere}.cloudstatus.error{color:#9f432f;background:#f8e9e4}.cloudstatus.ok{color:var(--green);background:var(--green-light)}.cloudmembers{font-size:12px;line-height:2;margin-top:8px}@media(max-width:650px){.cloudgrid,.stopgrid,.stopedit{grid-template-columns:1fr}.stopgrid textarea,.stopedit textarea,.stopedit .wide{grid-column:1}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style id="compact-itinerary-v3">
+/* View-first itinerary: editing stays in a separate sheet. */
+#syncTrip{display:none!important}
+#tripSyncBar{padding:9px 15px!important}
+#tripSyncBar .panelhead{margin:0;align-items:center}
+#tripSyncBar .kicker{font-size:9px}
+#syncStatus{font-size:10px}
+#itinerary>.panelhead{align-items:center}
+#timeline .event{grid-template-columns:56px 11px minmax(0,1fr);gap:9px;padding-bottom:6px}
+#timeline .etime{font-size:12px;padding-top:13px}
+#timeline .dot{width:7px;height:7px;margin-top:18px}
+#timeline .eventbody{border:0;border-bottom:1px solid var(--line);border-radius:0;padding:11px 2px 13px;box-shadow:none;transform:none!important}
+#timeline .eventbody:hover{border-color:var(--line)}
+#timeline .eventbody h3{font-size:15px;margin:0 0 3px}
+#timeline .eventbody p{font-size:12px;line-height:1.55;margin:0;color:var(--muted)}
+#timeline .eventlinks{margin-top:7px}
+#timeline .stopcontrols{margin-top:8px}
+#timeline .stopcontrols button{font-size:10px!important;padding:4px 9px!important}
+#timeline .eventlinks .minilink{background:transparent;padding:4px 7px}
+.stopform{display:none!important}
+#quickAddStop{border:1px solid var(--green);border-radius:999px;padding:8px 13px;background:var(--green);color:white;font:inherit;font-weight:700;font-size:11px;cursor:pointer;margin-left:auto}
+#tripEditor[hidden]{display:none!important}
+#tripEditor{position:fixed;inset:0;background:#11251f99;z-index:99999;display:flex;align-items:flex-end;justify-content:center;padding:12px}
+#tripEditor .sheet{background:#fffefa;color:var(--ink);width:min(100%,540px);max-height:calc(100dvh - 26px);overflow-y:auto;border-radius:22px;padding:22px 20px 25px;box-shadow:0 12px 40px #11251f40}
+#tripEditor .sheethead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px}
+#tripEditor .sheet h2{font-size:20px;margin:0}
+#tripEditor label{display:block;color:var(--muted);font-size:12px;margin:10px 0 5px}
+#tripEditor input,#tripEditor textarea{display:block;width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:11px;padding:12px;background:#fff;color:var(--ink);font:inherit;font-size:14px}
+#tripEditor textarea{min-height:78px;resize:vertical}
+#tripEditor .sheetactions{display:flex;gap:9px;margin-top:18px}
+#tripEditor .sheetactions button{flex:1;border:1px solid var(--line);padding:12px;border-radius:12px;background:white;color:var(--ink);font-weight:700;cursor:pointer}
+#tripEditor .sheetactions .primary{background:var(--green);border-color:var(--green);color:white}
+@media (min-width:700px){#tripEditor{align-items:center}}
+</style>
 </head>
 <body>
 <div class="app">
@@ -50,7 +84,7 @@
   <main class="main">
     <section class="panel" id="itinerary">
       <div class="panelhead"><div><div class="kicker" id="dayEyebrow">DAY 01 · TUESDAY</div><h2 id="dayTitle">抵達東京・城市暖身</h2><div class="sub" id="daySub">11 月 17 日｜11:00 抵達羽田機場</div></div><span class="tag" id="dayPill">東京</span></div>
-      <div class="timeline" id="timeline"></div>
+      <button type="button" id="quickAddStop">＋ 新增景點</button><div class="timeline" id="timeline"></div>
       <div class="stopform"><h3>＋ 新增景點</h3><div class="stopgrid"><input id="customTime" placeholder="時間，例如 15:30"><input id="customTitle" placeholder="景點名稱（必填）"><input id="customUrl" placeholder="地圖／資訊網址（選填）"><textarea id="customDesc" rows="2" placeholder="景點備註、交通或集合提醒"></textarea></div><div class="stopcontrols"><button class="btn primary" id="addCustomStop">新增景點</button><span class="sub">可以直接新增、編輯與刪除景點；未設定雲端時只保存在目前裝置。</span></div></div>
       <div class="note" id="dayNote"></div>
     </section>
@@ -188,19 +222,69 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
  function getDeletedBase(){try{return JSON.parse(localStorage.getItem('tokyo_field_deleted_base_v1')||'{}')}catch(e){return {}}}
  function eventKey(dayDate,index){return dayDate+'::'+index}
  function renderCustomEvents(){const events=getCustomEvents()[days[active].date]||[];$('addCustomStop').disabled=!canEdit();return events}
+
+ let editingStop=null;
+ const sheet=$('tripEditor');
+ const editField=(id,val)=>{$(id).value=val||''};
+ const closeSheet=()=>{sheet.hidden=true;editingStop=null;document.body.style.overflow=''};
+ $('closeTripEditor').onclick=closeSheet;$('cancelTripEditor').onclick=closeSheet;
+ sheet.addEventListener('click',e=>{if(e.target===sheet)closeSheet()});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)closeSheet()});
+ function openSheet(stop=null){
+  editingStop=stop?{id:stop.id,date:days[active].date}:null;
+  $('editorHeading').textContent=stop?'編輯景點':'新增景點';
+  editField('sheetTime',stop?.time||'');
+  editField('sheetTitle',stop?.title||'');
+  editField('sheetURL',stop?.url||'');
+  editField('sheetDesc',stop?.desc||'');
+  sheet.hidden=false;document.body.style.overflow='hidden';
+  $('sheetTitle').focus();
+ }
+ $('quickAddStop').onclick=()=>openSheet();
+ $('saveTripEditor').onclick=()=>{
+  const title=$('sheetTitle').value.trim();
+  if(!title){notify('請輸入景點名稱');$('sheetTitle').focus();return}
+  const u=$('sheetURL').value.trim(),url=cleanUrl(u);
+  if(u&&!url){notify('請輸入正確的 http 或 https 網址');return}
+  const item={time:$('sheetTime').value.trim()||'未定',title,desc:$('sheetDesc').value.trim(),url};
+  const date=days[active].date;
+  if(!editingStop){
+   const list=getCustomEvents();list[date]=list[date]||[];list[date].push(item);
+   localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list));
+  }else if(editingStop.id.startsWith('base-')){
+   const edit=getEventEdits();edit[date]={...(edit[date]||{}),[editingStop.id]:item};
+   localStorage.setItem('tokyo_field_event_edits_v1',JSON.stringify(edit));
+  }else{
+   const list=getCustomEvents(),arr=list[date]||[];
+   arr[Number(editingStop.id.slice(7))]=item;list[date]=arr;
+   localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list));
+  }
+  closeSheet();window.renderDay();notify(editNotice());
+ };
  window.renderDay=function(){
    oldRenderDay();
    const day=days[active],date=day.date,events=getCustomEvents()[date]||[],edits=getEventEdits(),deleted=getDeletedBase();
    const timeline=$('timeline');
-   // Rebuild the default timeline with editable/deletable preset stops.
-   const base=day.events.map((e,i)=>({id:'base-'+i,time:e[0],title:e[1],desc:e[2],url:e[3],base:true,index:i})).filter(e=>!(deleted[date]||[]).includes(e.id)).map(e=>({...e,...(edits[date]||{})[e.id]}));
-   const custom=events.map((e,i)=>({...e,id:'custom-'+i,base:false,index:i}));
+   const base=day.events.map((e,i)=>({id:'base-'+i,time:e[0],title:e[1],desc:e[2],url:e[3]}))
+      .filter(e=>!(deleted[date]||[]).includes(e.id))
+      .map(e=>({...e,...(edits[date]||{})[e.id]}));
+   const custom=events.map((e,i)=>({...e,id:'custom-'+i}));
    const all=[...base,...custom].sort((a,b)=>String(a.time||'').localeCompare(String(b.time||''),'zh-Hant',{numeric:true}));
-   timeline.innerHTML=all.map(e=>`<div class="event"><div class="etime">${esc(e.time||'未定')}</div><div class="rail"><span class="dot"></span></div><div class="eventbody"><div class="eventtop"><div><h3>${esc(e.title)}</h3><p>${esc(e.desc||'')}</p></div></div>${e.url?`<div class="eventlinks"><a class="minilink" href="${safeHref(e.url)}" target="_blank" rel="noopener">開啟地圖／資訊 ↗</a></div>`:''}<div class="stopcontrols"><button class="btn" data-stopedit="${e.id}" style="padding:5px 9px;font-size:11px" ${!canEdit()?'disabled':''}>編輯</button><button class="btn" data-stopdelete="${e.id}" style="padding:5px 9px;font-size:11px;color:var(--orange)" ${!canEdit()?'disabled':''}>刪除</button></div><div class="stopedit" id="form-${e.id}" hidden><input data-time="${e.id}" value="${esc(e.time||'')}" placeholder="時間"><input data-title="${e.id}" value="${esc(e.title||'')}" placeholder="景點名稱"><input class="wide" data-url="${e.id}" value="${esc(e.url||'')}" placeholder="地圖／資訊網址"><textarea data-desc="${e.id}" rows="2" placeholder="景點備註">${esc(e.desc||'')}</textarea><div class="wide stopcontrols"><button class="btn primary" data-stopsave="${e.id}" style="padding:6px 10px;font-size:11px">儲存並同步</button><button class="btn" data-stopcancel="${e.id}" style="padding:6px 10px;font-size:11px">取消</button></div></div></div></div>`).join('');
-   timeline.querySelectorAll('[data-stopedit]').forEach(b=>b.onclick=()=>{const f=$('form-'+b.dataset.stopedit);if(f)f.hidden=!f.hidden});
-   timeline.querySelectorAll('[data-stopcancel]').forEach(b=>b.onclick=()=>{const f=$('form-'+b.dataset.stopcancel);if(f)f.hidden=true});
-   timeline.querySelectorAll('[data-stopsave]').forEach(b=>b.onclick=async()=>{const id=b.dataset.stopsave,title=timeline.querySelector(`[data-title="${id}"]`).value.trim();if(!title){notify('請輸入景點名稱');return}const item={time:timeline.querySelector(`[data-time="${id}"]`).value.trim()||'未定',title,desc:timeline.querySelector(`[data-desc="${id}"]`).value.trim(),url:cleanUrl(timeline.querySelector(`[data-url="${id}"]`).value.trim())};if(id.startsWith('base-')){const ev=getEventEdits();ev[date]={...(ev[date]||{}),[id]:item};localStorage.setItem('tokyo_field_event_edits_v1',JSON.stringify(ev))}else{const list=getCustomEvents(),arr=list[date]||[];arr[Number(id.slice(7))]=item;list[date]=arr;localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list))}window.renderDay();notify(editNotice())});
-   timeline.querySelectorAll('[data-stopdelete]').forEach(b=>b.onclick=async()=>{const id=b.dataset.stopdelete;const e=all.find(x=>x.id===id);if(!confirm(`確定刪除「${e?.title||'此景點'}」？`))return;if(id.startsWith('base-')){const del=getDeletedBase();del[date]=[...(del[date]||[]),id].filter((v,i,a)=>a.indexOf(v)===i);localStorage.setItem('tokyo_field_deleted_base_v1',JSON.stringify(del))}else{const list=getCustomEvents(),arr=list[date]||[];arr.splice(Number(id.slice(7)),1);list[date]=arr;localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list))}window.renderDay();notify(editNotice())});
+   timeline.innerHTML=all.map(e=>`<div class="event"><div class="etime">${esc(e.time||'未定')}</div><div class="rail"><span class="dot"></span></div><div class="eventbody"><h3>${esc(e.title)}</h3>${e.desc?'<p>'+esc(e.desc)+'</p>':''}<div class="eventlinks">${e.url?'<a class="minilink" href="'+safeHref(e.url)+'" target="_blank" rel="noopener">📍 地圖 ↗</a>':''}<button class="minilink" type="button" data-stopedit="${e.id}">編輯</button><button class="minilink" type="button" data-stopdelete="${e.id}">刪除</button></div></div></div>`).join('');
+   timeline.querySelectorAll('[data-stopedit]').forEach(b=>b.onclick=()=>openSheet(all.find(e=>e.id===b.dataset.stopedit)));
+   timeline.querySelectorAll('[data-stopdelete]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.stopdelete,e=all.find(x=>x.id===id);
+    if(!confirm('確定刪除「'+(e?.title||'此景點')+'」？'))return;
+    if(id.startsWith('base-')){
+      const del=getDeletedBase();del[date]=[...(del[date]||[]),id].filter((x,i,a)=>a.indexOf(x)===i);
+      localStorage.setItem('tokyo_field_deleted_base_v1',JSON.stringify(del));
+    }else{
+      const list=getCustomEvents(),arr=list[date]||[];
+      arr.splice(Number(id.slice(7)),1);list[date]=arr;
+      localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list));
+    }
+    window.renderDay();notify(editNotice());
+   });
  };
  function cleanUrl(value){if(!value)return '';try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:''}catch(e){return ''}}
  function safeHref(value){return cleanUrl(value)||'#'}
@@ -210,5 +294,13 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
 })();
 </script>
 
-</body>
+<div id="tripEditor" hidden role="dialog" aria-modal="true" aria-labelledby="editorHeading">
+<div class="sheet">
+<div class="sheethead"><h2 id="editorHeading">編輯行程</h2><button class="btn" type="button" id="closeTripEditor" aria-label="關閉">✕</button></div>
+<label for="sheetTime">時間</label><input id="sheetTime" placeholder="例如：15:30">
+<label for="sheetTitle">景點名稱</label><input id="sheetTitle" placeholder="景點名稱">
+<label for="sheetURL">地圖／資訊網址</label><input id="sheetURL" placeholder="https://...">
+<label for="sheetDesc">備註</label><textarea id="sheetDesc" placeholder="交通、集合或行程備註"></textarea>
+<div class="sheetactions"><button type="button" id="cancelTripEditor">取消</button><button class="primary" type="button" id="saveTripEditor">完成</button></div>
+</div></div></body>
 </html>
