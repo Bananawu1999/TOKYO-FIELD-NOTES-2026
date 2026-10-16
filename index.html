@@ -183,12 +183,13 @@ body.is-itinerary-dragging{user-select:none;-webkit-user-select:none}
  #pdfPrintBook .pdf-footer{font-size:8pt;color:#647569;margin-top:12px}
 }
 </style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.20/pdfmake.min.js"></script>
 </head>
 <body>
 <div class="app">
 <header class="top">
   <div class="brand"><div class="brandmark">旅</div><span>TOKYO FIELD NOTES</span></div>
-  <div class="topright"><button class="btn" id="exportBtn">匯出備份 ↗</button><button class="btn primary" id="exportPdf" type="button">匯出六天 PDF ↗</button></div>
+  <div class="topright"><button class="btn" id="exportBtn">匯出備份 ↗</button><button class="btn primary" id="exportPdf" type="button">下載六天 PDF（可點地圖）↗</button><button class="btn" id="printPdfFallback" type="button" style="font-size:11px">列印備用</button></div>
 </header>
 <section class="hero">
   <div class="herotxt">
@@ -898,7 +899,90 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
    host.appendChild(section);
   });
  }
- $('exportPdf').addEventListener('click',()=>{renderCompletePrint();window.print()});
+
+ // Native PDF link annotations: unlike browser printing, pdfmake writes /URI
+ // links directly into the saved file (works in Acrobat, Files and PDF viewers).
+ const pdfFontURL='https://cdn.jsdelivr.net/gh/Darksorrow/pdfmake-font-vfs@main/fonts/NotoSansCJK-Regular.ttf';
+ const pdfFonts={NotoCJK:{normal:pdfFontURL,bold:pdfFontURL,italics:pdfFontURL,bolditalics:pdfFontURL}};
+ const pdfPlace=stop=>{
+  try{
+   const u=new URL(stop.url||'');
+   const q=u.searchParams.get('query')||u.searchParams.get('q');
+   if(q)return q;
+   const path=decodeURIComponent(u.pathname);
+   if(path.includes('/place/'))return path.split('/place/')[1].split('/')[0].replaceAll('+',' ');
+  }catch(e){}
+  return String(stop.title||'')+' 日本';
+ };
+ const pdfSafeLink=s=>{try{const u=new URL(s);return u.protocol==='https:'||u.protocol==='http:'?u.href:null}catch(e){return null}};
+ function generateLinkedTripPDF(){
+  const content=[
+   {text:'TOKYO FIELD NOTES 2026',color:'#557360',fontSize:9,bold:true,characterSpacing:1},
+   {text:'東京自由行｜六天完整行程',fontSize:20,bold:true,margin:[0,7,0,4]},
+   {text:'2026/11/17 — 11/22　·　DAY 01–06',fontSize:10,color:'#657569',margin:[0,0,0,4]},
+   {text:'含最新拖曳排序、跨天移動及自訂景點。藍綠色文字為可點擊的地圖連結。',fontSize:9,color:'#657569',margin:[0,0,0,16]}
+  ];
+  days.forEach((day,i)=>{
+   const stops=dayStops(day.date);
+   content.push({text:'DAY '+String(i+1).padStart(2,'0')+'　|　2026/'+day.date,fontSize:10,bold:true,color:'#426e50',pageBreak:i===0?undefined:'before',margin:[0,1,0,5]});
+   content.push({text:day.title,fontSize:16,bold:true,margin:[0,0,0,7]});
+   if(day.sub)content.push({text:day.sub,fontSize:9,color:'#556b5e',margin:[0,0,0,8]});
+   if(day.note)content.push({text:day.note,fontSize:9,color:'#526659',margin:[0,0,0,11]});
+   if(!stops.length)content.push({text:'本日尚無行程',fontSize:10,margin:[0,12,0,12]});
+   stops.forEach((stop,index)=>{
+    const dest=pdfSafeLink(stop.url)||('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(pdfPlace(stop)));
+    const links=[{text:'［點我開啟 Google Maps］',link:dest,color:'#176d61',decoration:'underline'}];
+    if(index+1<stops.length){
+     const next=stops[index+1];
+     const nav='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(pdfPlace(stop))+'&destination='+encodeURIComponent(pdfPlace(next))+'&travelmode=transit';
+     links.push({text:'　［下一站導航］',link:nav,color:'#176d61',decoration:'underline'});
+    }
+    content.push({
+     columns:[
+      {width:90,text:String(stop.time||'未定'),bold:true,fontSize:9,color:'#3f624b'},
+      {width:'*',stack:[
+       {text:String(stop.title||'未命名景點'),bold:true,fontSize:11,margin:[0,0,0,3]},
+       ...(stop.desc?[{text:String(stop.desc),fontSize:9,color:'#606e64',margin:[0,0,0,5]}]:[]),
+       {text:links,fontSize:9}
+      ]}
+     ],
+     columnGap:9,margin:[0,7,0,8],
+     unbreakable:true
+    });
+   });
+   content.push({text:'＊地圖與導航需要網路；交通、營業時間請以當日最新資訊為準。',fontSize:8,color:'#777f79',margin:[0,12,0,0]});
+  });
+  return {
+   info:{title:'TOKYO FIELD NOTES 2026｜六天行程',subject:'Six-day Tokyo itinerary with clickable Google Maps links'},
+   pageSize:'A4',pageMargins:[43,44,43,46],content,
+   defaultStyle:{font:'NotoCJK',fontSize:10,color:'#273a2f',lineHeight:1.26},
+   footer:(current,pageCount)=>({text:current+' / '+pageCount,alignment:'right',fontSize:8,color:'#77867a',margin:[0,8,40,0]})
+  };
+ }
+ $('exportPdf').addEventListener('click',()=>{
+  const button=$('exportPdf'),name='TOKYO-FIELD-NOTES-2026-六天行程.pdf';
+  if(!window.pdfMake){
+   alert('PDF 產生元件還沒載入成功，請確認網路後重新整理。也可以先使用「列印備用」。');return;
+  }
+  button.disabled=true;button.textContent='正在建立可點擊連結的 PDF…';
+  try{
+   const definition=generateLinkedTripPDF();
+   // Use a single CJK font so Traditional Chinese and Japanese stay readable.
+   const pdf=window.pdfMake.createPdf(definition,null,pdfFonts);
+   pdf.getBlob(blob=>{
+    button.disabled=false;button.textContent='下載六天 PDF（可點地圖）↗';
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+    notify('PDF 已建立，地圖連結可在 PDF 閱讀器內點擊');
+   });
+  }catch(error){
+   console.error('Linked PDF generation failed',error);
+   button.disabled=false;button.textContent='下載六天 PDF（可點地圖）↗';
+   alert('產生 PDF 失敗：'+(error?.message||String(error))+'。請先使用列印備用。');
+  }
+ });
+ $('printPdfFallback').addEventListener('click',()=>{renderCompletePrint();window.print()});
  window.addEventListener('beforeprint',renderCompletePrint);
 
  controls();window.renderDay();setTimeout(connect,300);
