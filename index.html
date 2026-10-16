@@ -166,7 +166,7 @@ body.is-itinerary-dragging{user-select:none;-webkit-user-select:none}
  #pdfPrintBook .pdf-title{font-size:21pt;font-weight:850;margin:7px 0 4px}
  #pdfPrintBook .pdf-cover p{margin:3px 0;color:#647369;font-size:9pt}
  #pdfPrintBook .pdf-day{break-before:page;page-break-before:always}
- #pdfPrintBook .pdf-day:first-of-type{break-before:auto;page-break-before:auto}
+ #pdfPrintBook .pdf-cover + .pdf-day{break-before:auto;page-break-before:auto}
  #pdfPrintBook .pdf-day-header{padding-bottom:9px;border-bottom:2px solid #456c55;margin-bottom:11px}
  #pdfPrintBook .pdf-day-id{font-size:9pt;font-weight:800;color:#56745f;letter-spacing:1px}
  #pdfPrintBook .pdf-day h2{font-size:17pt;margin:5px 0;line-height:1.3}
@@ -886,7 +886,7 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
     if(stop.desc)detail.appendChild(el('p','',stop.desc));
     const links=el('div','pdf-links');
     const search='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(place(stop));
-    hyperlink(links,'📍 景點地圖 ↗',linkURL(stop.url)||search);
+    hyperlink(links,'景點地圖 ↗',linkURL(stop.url)||search);
     if(index+1<stops.length){
      const next=stops[index+1];
      const navigation='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(place(stop))+'&destination='+encodeURIComponent(place(next))+'&travelmode=transit';
