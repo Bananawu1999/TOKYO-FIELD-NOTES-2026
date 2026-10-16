@@ -152,12 +152,43 @@ body.is-itinerary-dragging{user-select:none;-webkit-user-select:none}
 @media (max-width:850px){#budget{scroll-margin-top:110px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
+
+<style id="full-trip-print-css">
+#pdfPrintBook{display:none}
+@media print{
+ @page{size:A4;margin:13mm 14mm 15mm}
+ html,body{height:auto!important;overflow:visible!important;background:#fff!important;color:#233a2e!important}
+ body>.app,body>.toast,body>.drag-day-toast,body>.drag-ghost,body>#tripEditor{display:none!important}
+ #pdfPrintBook{display:block!important;width:100%!important;position:static!important;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif!important;font-size:10pt;line-height:1.5}
+ #pdfPrintBook *{box-sizing:border-box}
+ #pdfPrintBook .pdf-cover{padding:0 0 10px;border-bottom:2px solid #3b6350;margin-bottom:16px}
+ #pdfPrintBook .pdf-brand{font-size:9pt;letter-spacing:1px;color:#53715f;font-weight:700}
+ #pdfPrintBook .pdf-title{font-size:21pt;font-weight:850;margin:7px 0 4px}
+ #pdfPrintBook .pdf-cover p{margin:3px 0;color:#647369;font-size:9pt}
+ #pdfPrintBook .pdf-day{break-before:page;page-break-before:always}
+ #pdfPrintBook .pdf-day:first-of-type{break-before:auto;page-break-before:auto}
+ #pdfPrintBook .pdf-day-header{padding-bottom:9px;border-bottom:2px solid #456c55;margin-bottom:11px}
+ #pdfPrintBook .pdf-day-id{font-size:9pt;font-weight:800;color:#56745f;letter-spacing:1px}
+ #pdfPrintBook .pdf-day h2{font-size:17pt;margin:5px 0;line-height:1.3}
+ #pdfPrintBook .pdf-day-sub{font-size:9pt;color:#56705e}
+ #pdfPrintBook .pdf-date{float:right;color:#647569;font-size:9pt}
+ #pdfPrintBook .pdf-note{background:#f4f7f3;border:1px solid #dbe7dd;padding:9px 11px;border-radius:8px;margin:9px 0 14px;color:#475f4e;font-size:9pt;break-inside:avoid}
+ #pdfPrintBook .pdf-stop{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid #e1e9e2;break-inside:avoid;page-break-inside:avoid}
+ #pdfPrintBook .pdf-time{width:88px;flex:none;color:#3d604a;font-size:9pt;font-weight:750;overflow-wrap:anywhere}
+ #pdfPrintBook .pdf-detail{flex:1;min-width:0}
+ #pdfPrintBook .pdf-detail h3{font-size:11pt;margin:0 0 3px;line-height:1.35}
+ #pdfPrintBook .pdf-detail p{font-size:9pt;color:#627068;margin:3px 0;white-space:pre-wrap}
+ #pdfPrintBook .pdf-links{display:flex;gap:16px;margin-top:5px;flex-wrap:wrap;font-size:9pt}
+ #pdfPrintBook a{color:#23654c!important;text-decoration:underline!important}
+ #pdfPrintBook .pdf-footer{font-size:8pt;color:#647569;margin-top:12px}
+}
+</style>
 </head>
 <body>
 <div class="app">
 <header class="top">
   <div class="brand"><div class="brandmark">旅</div><span>TOKYO FIELD NOTES</span></div>
-  <div class="topright"><button class="btn" id="exportBtn">匯出備份 ↗</button><button class="btn primary" onclick="window.print()">列印行程</button></div>
+  <div class="topright"><button class="btn" id="exportBtn">匯出備份 ↗</button><button class="btn primary" id="exportPdf" type="button">匯出六天 PDF ↗</button></div>
 </header>
 <section class="hero">
   <div class="herotxt">
@@ -220,6 +251,7 @@ body.is-itinerary-dragging{user-select:none;-webkit-user-select:none}
 </div>
 </div>
 <div class="toast" id="toast">已更新</div>
+<div id="pdfPrintBook" aria-hidden="true"></div>
 <script>
 const days=[{"date":"11/17","dow":"TUESDAY","title":"抵達東京・新宿購物・金色不如歸","sub":"11 月 17 日｜11:00 抵達羽田；下午逛新宿；金色不如歸晚餐","pill":"新宿","note":"住宿：Hotel QUEEN ANNEX，新宿2-10-6，15:00後入住。下午依序逛一保堂、迪士尼旗艦店、KIDDY LAND、LUMINE EST 的 Lazy Hazy Planet 與 HARE。17:30 金色不如歸領晚餐整理券，18:30起按叫號用餐；晚間視體力散步花園神社、3D貓咪、歌舞伎町哥吉拉。營業時間仍須出發前確認。","events":[["11:00","抵達羽田機場","入境、領行李；確認交通。","https://www.google.com/maps/search/?api=1&query=Haneda+Airport"],["12:30–14:00","前往 Hotel QUEEN ANNEX 放行李","東京都新宿區新宿2-10-6；15:00後入住，先詢問能否寄放行李。","https://www.google.com/maps/search/?api=1&query=Hotel+Queen+Annex+2-10-6+Shinjuku+Tokyo"],["14:00–14:30","簡單午餐","金色不如歸改成晚餐，下午先簡單吃。","https://www.google.com/maps/search/?api=1&query=Shinjuku+Gyoen+restaurants"],["14:30–15:10","一保堂茶舗 伊勢丹新宿店","伊勢丹新宿店；百貨約20:00打烊，茶飲外帶可能19:00先截止。","https://www.google.com/maps/search/?api=1&query=Ippodo+Tea+Isetan+Shinjuku"],["15:15–15:55","東京迪士尼旗艦店","Disney FLAGSHIP TOKYO；約21:00打烊。","https://www.google.com/maps/search/?api=1&query=Disney+FLAGSHIP+TOKYO"],["16:00–16:30","KIDDY LAND Shinjuku","新宿東口角色周邊商店；約20:30打烊。","https://www.google.com/maps/search/?api=1&query=Kiddy+Land+Shinjuku"],["16:35–17:05","Lazy Hazy Planet、HARE ルミネエスト","LUMINE EST 內的兩間店先逛；約21:00打烊，可視號碼牌狀況再回來。","https://www.google.com/maps/search/?api=1&query=Lumine+Est+Shinjuku"],["17:30","金色不如歸領晚餐整理券","SOBA HOUSE 金色不如帰 新宿御苑本店，新宿2-4-1；夜間整理券17:30開始，需依現場叫號及規則返回。","https://www.google.com/maps/search/?api=1&query=SOBA+HOUSE+Konjiki+Hototogisu+Shinjuku"],["18:30–19:30（彈性）","金色不如歸晚餐","晚間營業18:30–20:30（售完可能提早結束）；依整理券實際時段用餐。","https://www.google.com/maps/search/?api=1&query=SOBA+HOUSE+Konjiki+Hototogisu+Shinjuku"],["晚餐後","花園神社・夜間參拜","免費走訪夜間神社，御朱印窗口可能已關閉。","https://www.google.com/maps/search/?api=1&query=Hanazono+Shrine+Shinjuku"],["晚餐後（彈性）","新宿東口 3D 貓咪・哥吉拉夜景","Cross Shinjuku Vision 3D貓咪及歌舞伎町哥吉拉；如時間太晚，優先3D貓咪、隔天早起勿勉強。","https://www.google.com/maps/search/?api=1&query=Cross+Shinjuku+Vision"],["約 21:00 後","返回 Hotel QUEEN ANNEX 休息","隔日富士山行程07:50集合，請早點休息。","https://www.google.com/maps/search/?api=1&query=Hotel+Queen+Annex+2-10-6+Shinjuku+Tokyo"]]},{"date":"11/18","dow":"WEDNESDAY","title":"富士山一日遊・淺間公園離團","sub":"11 月 18 日｜07:50 新宿西口集合；15:10 預計離團","pill":"新宿 → 富士山","note":"住宿：四季之宿 Popura。預計 15:10 在新倉山淺間公園離團，必須先取得 KKday 同意，並確認實際停靠順序與接駁。","events":[["07:15–07:25（建議）","Hotel QUEEN ANNEX 搭計程車","從新宿 2-10-6 前往三井住友銀行新宿西口支店；原本估計 6 分鐘不再適用，請事先查詢車程並預留叫車與找集合點的時間，目標 07:40 前抵達。","https://www.google.com/maps/dir/?api=1&origin=Hotel+Queen+Annex+2-10-6+Shinjuku+Tokyo&destination=SMBC+Shinjuku+Nishiguchi+Branch&travelmode=driving"],["07:40 前","抵達集合點","三井住友銀行新宿西口支店，西新宿 1-7-1；確認導遊及集合位置。","https://www.google.com/maps/search/?api=1&query=SMBC+Shinjuku+Nishiguchi+Branch"],["07:50","KKday 富士山一日遊集合","實際景點順序與時間以旅行團當日安排為準。","https://www.kkday.com/zh-tw/product/266389-fuji-kawaguchiko-oshino-hakkai-sengen"],["白天","富士山周邊景點","依旅行團路線參觀；勿把示意景點當成保證停靠。","https://www.kkday.com/zh-tw/product/266389-fuji-kawaguchiko-oshino-hakkai-sengen"],["15:10（待確認）","新倉山淺間公園離團","離團安排需經業者同意；預先確認行李及離團後交通。","https://www.google.com/maps/search/?api=1&query=Arakurayama+Sengen+Park"],["下午–晚上","前往四季之宿 Popura","確認從淺間公園到旅館的交通、入住時間與晚餐。","https://www.google.com/maps/search/?api=1&query=Shiki+no+Yado+Popura"]]},{"date":"11/19","dow":"THURSDAY","title":"逆富士・dotcom coffee・東京鐵塔・今半","sub":"11 月 19 日｜河口湖返東京；dotcom coffee 新富；東京鐵塔夜景；銀座今半","pill":"河口湖 → 新富 → 東京鐵塔 → 銀座","note":"依照指定順序：逆富士 → 河口湖站 → dotcom coffee 新富 → 芝公園與東京鐵塔夜景 → 人形町今半銀座晚餐。重要：若14:00才抵達河口湖站，無法在15:00抵達新富咖啡廳；15:00–16:00僅是希望時段，需提前離開河口湖、調整車次或將後面景點時間順延。11/19–11/22住宿未定，東京放行李時間也尚須確認。今半銀座店19:00兩位尚未訂位。","events":[["06:00–08:00","河口湖湖畔拍逆富士","產屋崎或其他合適湖岸，視天氣、交通與旅館建議選擇。","https://www.google.com/maps/search/?api=1&query=Ubuyagasaki+Kawaguchiko"],["08:00–12:30","早餐・湖畔散步・整理行李","預留回旅館與退房時間。","https://www.google.com/maps/search/?api=1&query=Lake+Kawaguchiko"],["12:30–13:30","午餐・準備前往車站","與旅館確認接送時間。","https://www.google.com/maps/search/?api=1&query=Kawaguchiko"],["約 14:00","抵達河口湖站","旅館協助接送；返新宿巴士／電車班次尚未訂。","https://www.google.com/maps/search/?api=1&query=Kawaguchiko+Station"],["14:00 後（返程車班待訂）","河口湖站 → 東京、飯店放行李","返東京及放行李的時間依交通和住宿位置決定；若14:00才到河口湖站，無法趕上15:00咖啡廳。","https://bus.fujikyu.co.jp/en/highway/fujisan/tokyo/"],["15:00–16:00（目標，需調整交通）","dotcom coffee 新富","東京都中央區新富1-5-10；店家營業時間仍須出發前確認。注意：14:00河口湖站與15:00到咖啡廳的時間衝突，尚不能視為確定。","https://www.google.com/maps/search/?api=1&query=dotcom+coffee+Shintomi+1-5-10+Tokyo"],["16:20–17:10（彈性）","前往芝公園・東京鐵塔周邊","咖啡廳後從新富前往芝公園、赤羽橋／御成門一帶，依實際交通時間調整。","https://www.google.com/maps/dir/?api=1&origin=dotcom+coffee+Shintomi+1-5-10+Tokyo&destination=Shiba+Park+Tokyo&travelmode=transit"],["17:10–18:00（彈性）","芝公園・東京鐵塔夜景拍照","只看東京鐵塔夜景、外部拍照，不安排登塔；實際亮燈時間依當日為準。","https://www.google.com/maps/search/?api=1&query=Tokyo+Tower"],["18:00–18:50","搭車前往銀座晚餐","前往銀座6-8-7交詢ビル5F，建議預留交通與找入口時間。","https://www.google.com/maps/dir/?api=1&origin=Tokyo+Tower+Tokyo&destination=Ningyocho+Imahan+Ginza+6-8-7&travelmode=transit"],["19:00–20:30（建議訂位）","人形町今半 銀座店｜壽喜燒晚餐","交詢ビル5F。預計19:00兩人用餐，尚未訂位。","https://restaurant.imahan.com/ginza/"],["20:30 後","銀座散步・返回住宿","晚餐後視體力逛逛，咖啡廳已改至下午，不再安排餐後前往。","https://www.google.com/maps/search/?api=1&query=Ginza+Tokyo"]]},{"date":"11/20","dow":"FRIDAY","title":"神宮外苑・原宿・澀谷・焼鳥つかだ","sub":"11 月 20 日（週五）｜神宮外苑銀杏・原宿・邁泉午餐・澀谷・焼鳥つかだ晚餐","pill":"青山 → 原宿 → 澀谷","note":"上午神宮外苑銀杏大道、原宿竹下通，中午邁泉豬排青山本店；下午表參道購物後順路前往澀谷PARCO 6F寶可夢中心，最後逛UNIQLO澀谷道玄坂店。寶可夢中心10:00–21:00，UNIQLO 11:00–21:00；週五仍可能人多，營業時間出發前再確認。 晚餐暫定焼鳥つかだ 渋谷店，地址道玄坂1-6-8 楠本第2ビル2F；週五17:00–23:00（L.O.22:00），建議18:30左右前往，尚未訂位，通常以套餐為主。","events":[["08:30–10:00","神宮外苑銀杏大道","早上拍照；銀杏轉色依當年氣候而定。","https://www.google.com/maps/search/?api=1&query=Meiji+Jingu+Gaien+Ginkgo+Avenue"],["10:00–10:45","前往原宿","從神宮外苑搭車或步行轉乘前往原宿一帶。","https://www.google.com/maps/search/?api=1&query=Harajuku+Station"],["11:00–12:15","原宿・竹下通逛街","服飾、角色周邊與街區散步，預留到邁泉的步行時間。","https://www.google.com/maps/search/?api=1&query=Takeshita+Street+Harajuku"],["12:30–13:45（建議）","邁泉豬排・青山本店午餐","とんかつ まい泉 青山本店，東京都渋谷区神宮前4-8-5；營業11:00–22:00，最後點餐21:00。週五仍可能需要現場排隊。","https://mai-sen.com/restaurant/aoyama/"],["13:45–15:00","表參道購物・咖啡廳","邁泉吃完順路逛表參道，下午不必安排太久，繼續往澀谷方向移動。","https://www.google.com/maps/search/?api=1&query=Omotesando+Tokyo"],["15:00–15:35（彈性）","前往澀谷 PARCO","從表參道商圈步行約25–35分鐘或搭車到澀谷，再前往PARCO，依實際位置調整。","https://www.google.com/maps/dir/?api=1&origin=Omotesando+Tokyo&destination=Shibuya+PARCO+Tokyo&travelmode=walking"],["15:35–16:45","寶可夢中心 澀谷店（PARCO 6F）","ポケモンセンターシブヤ，宇田川町15-1 澀谷PARCO 6F；10:00–21:00，21:00打烊。可順逛同樓層Nintendo TOKYO，週六可能需要排隊。","https://shop.pokemon.co.jp/ja/shop/pokemoncenter-shibuya/"],["17:00–18:00","UNIQLO 澀谷道玄坂店","渋谷道玄坂店，東京都渋谷区道玄坂2-29-5 渋谷プライム內；11:00–21:00，21:00打烊。","https://map.uniqlo.com/jp/ja/detail/10101307"],["18:30–20:00（暫定）","焼鳥つかだ 渋谷店｜串燒晚餐","地址：東京都渋谷区道玄坂1-6-8 楠本第2ビル2F，JR澀谷站步行約4分鐘。週五營業17:00–23:00，最後點餐22:00。尚未訂位，建議提前預約；官方以每人一套套餐為主。","https://www.yakitori-tsukada.jp/shibuya/"],["20:00 後","澀谷夜間散步・返回新宿","吃完晚餐依體力經澀谷站搭車返回新宿，隔日早上前往羽田。","https://www.google.com/maps/search/?api=1&query=Shibuya+Station"]]},{"date":"11/21","dow":"SATURDAY","title":"鎌倉一日遊・御朱印巡禮","sub":"11 月 21 日（週六）｜鎌倉・鶴岡八幡宮・長谷寺・高德院，晚餐敘敘苑待選","pill":"鎌倉","note":"建議新宿搭 JR 至鎌倉；鎌倉站周邊步行，之後搭江之電到長谷。御朱印請以當天授與所時間為準。 11/21 晚餐希望吃「敘敘苑（叙々苑）」燒肉，待確定 11/19–11/22 東京住宿位置後，再依鎌倉返程與飯店動線挑選分店並確認訂位。 高德院官方公告 11/21（六）僅頒發書置き（紙本）御朱印，不提供御朱印帳直接書入；週六遊客可能較多。","events":[["08:00","新宿出發前往鎌倉","JR 湘南新宿線或適合的轉乘路線，依當日班次確認。","https://www.google.com/maps/search/?api=1&query=Shinjuku+Station"],["09:30","鶴岡八幡宮・御朱印","參拜與蒐集御朱印。","https://www.google.com/maps/search/?api=1&query=Tsurugaoka+Hachimangu"],["10:30–12:30","小町通逛街・午餐","從八幡宮沿街回鎌倉站周邊。","https://www.google.com/maps/search/?api=1&query=Komachi+dori+Kamakura"],["12:30–13:15","江之電前往長谷","從鎌倉站搭江之電到長谷站。","https://www.google.com/maps/search/?api=1&query=Hase+Station+Kamakura"],["13:15–14:30","長谷寺・御朱印","留意御朱印受理截止時間。","https://www.google.com/maps/search/?api=1&query=Hasedera+Kamakura"],["14:30–15:30","鎌倉大佛・高德院","步行參觀，視體力與時間調整。 2026/11/21 高德院御朱印僅提供預寫紙本，不現場書入御朱印帳。","https://www.google.com/maps/search/?api=1&query=Kotokuin+Kamakura"],["傍晚","返回鎌倉站・搭 JR 回新宿","長谷站搭江之電回鎌倉站，再搭 JR。","https://www.google.com/maps/search/?api=1&query=Kamakura+Station"],["晚餐（待安排）","敘敘苑・燒肉晚餐（分店待選）","改至 11/21（週六），分店與用餐時間待住宿確認後挑選；尚未訂位。","https://www.google.com/maps/search/?api=1&query=Jojoen+Tokyo"]]},{"date":"11/22","dow":"SUNDAY","title":"羽田機場・返回松山","sub":"11 月 22 日｜11:00 羽田起飛","pill":"返程","note":"11:00 為目前航班時間；請依最終飯店位置、航廈及航空公司規定確認交通與報到。","events":[["約 07:00","從新宿出發前往羽田","建議提早確認機場巴士或電車班次。","https://www.tokyo-haneda.com/zh-CHT/access/"],["約 08:00","目標抵達羽田機場","預留報到、托運、安檢及出境時間。","https://www.google.com/maps/search/?api=1&query=Haneda+Airport"],["11:00","航班起飛返回松山","依機票確認實際時間及航廈。","https://www.google.com/maps/search/?api=1&query=Haneda+Airport"]]}];
 const dailyRouteLinks={"11/17":"https://www.google.com/maps/dir/?api=1&origin=Ippodo+Tea+Isetan+Shinjuku&destination=SOBA+HOUSE+Konjiki+Hototogisu+Shinjuku&waypoints=Disney+FLAGSHIP+TOKYO%7CKiddy+Land+Shinjuku%7CLumine+Est+Shinjuku&travelmode=walking","11/18":"https://www.google.com/maps/dir/?api=1&origin=Sumitomo%20Mitsui%20Banking%20Corporation%20Shinjuku%20Nishiguchi%20Branch&destination=Arakurayama%20Sengen%20Park&waypoints=&travelmode=transit","11/19":"https://www.google.com/maps/dir/?api=1&origin=dotcom+coffee+Shintomi+1-5-10+Tokyo&destination=Ningyocho+Imahan+Ginza+6-8-7&waypoints=Shiba+Park+Tokyo%7CTokyo+Tower+Tokyo&travelmode=transit","11/20":"https://www.google.com/maps/dir/?api=1&origin=Meiji+Jingu+Gaien+Ginkgo+Avenue&destination=Yakitori+Tsukada+Shibuya+1-6-8+Dogenzaka&waypoints=Takeshita+Street+Harajuku%7CTonkatsu+Maisen+Aoyama%7COmotesando%7CShibuya+PARCO%7CUNIQLO+Shibuya+Dogenzaka&travelmode=walking","11/21":"https://www.google.com/maps/dir/?api=1&origin=Kamakura%20Station&destination=Kotokuin%20Kamakura&waypoints=Tsurugaoka%20Hachimangu%7CKomachi%20dori%20Kamakura%7CHasedera%20Kamakura&travelmode=transit","11/22":"https://www.google.com/maps/dir/?api=1&origin=Shinjuku%20Station&destination=Haneda%20Airport&waypoints=&travelmode=transit"};
@@ -804,6 +836,70 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
  function cleanUrl(value){if(!value)return '';try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:''}catch(e){return ''}}
  function safeHref(value){return cleanUrl(value)||'#'}
  $('addCustomStop').onclick=async()=>{const title=$('customTitle').value.trim();if(!title){notify('請輸入景點／活動名稱');return}const url=cleanUrl($('customUrl').value.trim());if($('customUrl').value.trim()&&!url){notify('網址請使用 http:// 或 https://');return}const all=getCustomEvents();all[days[active].date]=all[days[active].date]||[];const date=days[active].date,newId='custom-'+all[date].length;all[date].push({time:$('customTime').value.trim()||'未定',title,desc:$('customDesc').value.trim(),url});localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(all));insertNewStopByTime(date,sourceRef(date,newId));$('customTime').value='';$('customTitle').value='';$('customDesc').value='';$('customUrl').value='';window.renderDay();notify(editNotice())};
+
+
+ function renderCompletePrint(){
+  const host=$('pdfPrintBook');
+  const el=(tag,cls,label)=>{
+   const node=document.createElement(tag);
+   if(cls)node.className=cls;
+   if(label!==undefined)node.textContent=String(label);
+   return node;
+  };
+  const place=stop=>{
+   try{
+    const u=new URL(stop.url||'');
+    const q=u.searchParams.get('query')||u.searchParams.get('q');
+    if(q)return q;
+    const path=decodeURIComponent(u.pathname);
+    if(path.includes('/place/'))return path.split('/place/')[1].split('/')[0].replaceAll('+',' ');
+   }catch(e){}
+   return String(stop.title||'')+' 日本';
+  };
+  const linkURL=url=>{try{const u=new URL(url);return ['https:','http:'].includes(u.protocol)?u.href:null}catch(e){return null}};
+  const hyperlink=(parent,label,url)=>{
+   const a=el('a','',label);a.href=url;a.target='_blank';a.rel='noopener noreferrer';parent.appendChild(a);
+  };
+  host.replaceChildren();
+  const cover=el('section','pdf-cover');
+  cover.appendChild(el('div','pdf-brand','TOKYO FIELD NOTES 2026'));
+  cover.appendChild(el('div','pdf-title','東京自由行｜六天完整行程'));
+  cover.appendChild(el('p','','2026/11/17 — 11/22 · DAY 01–06'));
+  cover.appendChild(el('p','','包含目前已新增、編輯及拖曳移動的行程；點擊每站連結可查看地圖與導航。'));
+  host.appendChild(cover);
+  days.forEach((day,i)=>{
+   const stops=dayStops(day.date);
+   const section=el('section','pdf-day');
+   const header=el('header','pdf-day-header');
+   header.appendChild(el('span','pdf-date',day.date+' / 2026'));
+   header.appendChild(el('div','pdf-day-id','DAY '+String(i+1).padStart(2,'0')));
+   header.appendChild(el('h2','',day.title));
+   header.appendChild(el('div','pdf-day-sub',day.sub||''));
+   section.appendChild(header);
+   if(day.note)section.appendChild(el('div','pdf-note',day.note));
+   if(!stops.length)section.appendChild(el('p','','本日尚未安排景點。'));
+   stops.forEach((stop,index)=>{
+    const row=el('div','pdf-stop');
+    row.appendChild(el('div','pdf-time',stop.time||'未定'));
+    const detail=el('div','pdf-detail');
+    detail.appendChild(el('h3','',stop.title||'未命名景點'));
+    if(stop.desc)detail.appendChild(el('p','',stop.desc));
+    const links=el('div','pdf-links');
+    const search='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(place(stop));
+    hyperlink(links,'📍 景點地圖 ↗',linkURL(stop.url)||search);
+    if(index+1<stops.length){
+     const next=stops[index+1];
+     const navigation='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(place(stop))+'&destination='+encodeURIComponent(place(next))+'&travelmode=transit';
+     hyperlink(links,'→ 下一站導航',navigation);
+    }
+    detail.appendChild(links);row.appendChild(detail);section.appendChild(row);
+   });
+   section.appendChild(el('p','pdf-footer','交通時間及營業資訊請以旅行當日為準。PDF 中的地圖與導航連結需要網路才能開啟。'));
+   host.appendChild(section);
+  });
+ }
+ $('exportPdf').addEventListener('click',()=>{renderCompletePrint();window.print()});
+ window.addEventListener('beforeprint',renderCompletePrint);
 
  controls();window.renderDay();setTimeout(connect,300);
 })();
