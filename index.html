@@ -236,6 +236,78 @@ function renderDay(){let d=days[active];document.getElementById("dayEyebrow").te
 const ROUTE_POINTS={"hotel":["Hotel QUEEN ANNEX",35.6905,139.7059],"haneda":["羽田機場",35.5494,139.7798],"isetan":["一保堂・伊勢丹",35.6914,139.7042],"disney":["迪士尼旗艦店",35.6928,139.7037],"kiddy":["KIDDY LAND",35.6938,139.7025],"lumine":["LUMINE EST / HARE",35.6924,139.7012],"ramen":["金色不如歸",35.6883,139.7093],"hanazono":["花園神社",35.6944,139.706],"cat":["3D 貓咪",35.6929,139.7006],"godzilla":["哥吉拉",35.6957,139.7025],"smbc":["三井住友銀行新宿西口支店",35.6898,139.6987],"arakura":["新倉山淺間公園",35.4999,138.8018],"popura":["四季之宿 Popura",35.5172,138.7646],"ubuyagasaki":["產屋崎・逆富士",35.5227,138.7569],"kawaguchiko":["河口湖站",35.498,138.7686],"shinjuku":["新宿站",35.6909,139.7003],"shibapark":["芝公園",35.6551,139.7475],"tower":["東京鐵塔",35.6586,139.7454],"imahan":["人形町今半銀座店",35.6695,139.7622],"kamakura":["鎌倉站",35.319,139.5506],"hachimangu":["鶴岡八幡宮",35.3261,139.5564],"komachi":["小町通",35.3218,139.5532],"hase":["長谷站",35.311,139.5365],"hasedera":["長谷寺",35.3111,139.5338],"buddha":["鎌倉大佛",35.3167,139.5357],"ginkgo":["神宮外苑銀杏大道",35.6743,139.7172],"harajuku":["原宿站",35.6702,139.7027],"takeshita":["竹下通",35.6716,139.7044],"maisen":["邁泉青山本店",35.6672,139.7108],"omotesando":["表參道",35.6654,139.7126],"pokemon":["寶可夢中心 澀谷PARCO",35.662,139.6989],"uniqlo":["UNIQLO 澀谷道玄坂",35.6595,139.6973],"yakitori":["焼鳥つかだ 渋谷店",35.6574,139.6992],"dotcom":["dotcom coffee 新富",35.6724,139.772]};
 const ROUTE_LEGS={"11/17":[["搭車","羽田機場 → 飯店寄放行李","haneda hotel","transit"],["步行","下午新宿購物路線","isetan disney kiddy lumine","walking"],["步行","17:30 領券、金色不如歸晚餐","lumine ramen","walking"],["步行","花園神社、3D 貓咪、哥吉拉夜景","ramen hanazono cat godzilla","walking"]],"11/18":[["搭車","飯店 → 07:50 新宿西口集合點","hotel smbc","transit"],["跟團","KKday 富士山一日遊（離團須同意）","smbc arakura","driving"],["搭車","新倉山淺間公園 → Popura（交通待確認）","arakura popura","transit"]],"11/19":[["搭車","逆富士 → 河口湖站","ubuyagasaki kawaguchiko","driving"],["搭車","河口湖站 → 東京（返程與放行李時間待確認）","kawaguchiko shinjuku","transit"],["搭車","東京住宿／車站 → dotcom coffee 新富","shinjuku dotcom","transit"],["搭車","dotcom coffee 新富 → 芝公園","dotcom shibapark","transit"],["步行","芝公園 → 東京鐵塔外部夜景","shibapark tower","walking"],["搭車","東京鐵塔 → 人形町今半 銀座店晚餐","tower imahan","transit"]],"11/20":[["搭車","新宿 → 神宮外苑銀杏大道","shinjuku ginkgo","transit"],["搭車","銀杏大道 → 原宿","ginkgo harajuku","transit"],["步行","竹下通 → 邁泉豬排青山本店","harajuku takeshita maisen","walking"],["步行","表參道購物 → 澀谷寶可夢中心","maisen omotesando pokemon","walking"],["步行","澀谷PARCO → UNIQLO 道玄坂","pokemon uniqlo","walking"],["步行","UNIQLO 道玄坂 → 焼鳥つかだ 晚餐（18:30 暫定，週五17:00開店）","uniqlo yakitori","walking"],["搭車","焼鳥つかだ → 澀谷站 → 新宿","yakitori shinjuku","transit"]],"11/21":[["搭車","新宿 JR → 鎌倉站","shinjuku kamakura","transit"],["步行","鶴岡八幡宮、御朱印、小町通","kamakura hachimangu komachi","walking"],["搭車","江之電：鎌倉站 → 長谷站","kamakura hase","transit"],["步行","長谷寺 → 鎌倉大佛","hase hasedera buddha","walking"],["搭車","江之電、JR 返回新宿","hase kamakura shinjuku","transit"]],"11/22":[["搭車","新宿 → 羽田機場（目標08:00到）","shinjuku haneda","transit"]]};
 let routeMap=null,routeLayer=null,routeMode='全部';
+
+let routeCustomStops=[];
+let routeGeocoding=false;
+let routeGeocodeQueue=[];
+let routeGeocodeSeen=new Set();
+const routeGeoCache=(()=>{try{return JSON.parse(localStorage.getItem('tokyo_route_geo_cache_v1')||'{}')}catch{return {}}})();
+function routeTextPlace(stop){
+ try{
+  const url=new URL(stop.url||'');
+  const params=new URLSearchParams(url.search);
+  const place=params.get('query')||params.get('q');
+  if(place)return place;
+  const path=decodeURIComponent(url.pathname||'');
+  if(path.includes('/place/'))return path.split('/place/')[1].split('/')[0].replaceAll('+',' ');
+  if(path.includes('/search/'))return path.split('/search/')[1].split('/')[0].replaceAll('+',' ');
+ }catch(e){}
+ return stop.title+' '+(days[active].date==='11/21'?'鎌倉 神奈川':'東京 日本');
+}
+function queueRouteGeocode(key,query){
+ if(!query||routeGeocodeSeen.has(key)||routeGeoCache[query]===null)return;
+ routeGeocodeSeen.add(key);
+ if(Array.isArray(routeGeoCache[query])&&routeGeoCache[query].length===2){
+  ROUTE_POINTS[key][1]=routeGeoCache[query][0];
+  ROUTE_POINTS[key][2]=routeGeoCache[query][1];
+  return;
+ }
+ routeGeocodeQueue.push({key,query});
+ drainRouteGeocode();
+}
+async function drainRouteGeocode(){
+ if(routeGeocoding)return;
+ routeGeocoding=true;
+ while(routeGeocodeQueue.length){
+  const job=routeGeocodeQueue.shift();
+  if(!ROUTE_POINTS[job.key])continue;
+  try{
+   const u='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=jp&q='+encodeURIComponent(job.query);
+   const response=await fetch(u,{headers:{'Accept':'application/json'}});
+   if(response.ok){
+    const data=await response.json();
+    const result=data[0];
+    if(result){
+     const coords=[Number(result.lat),Number(result.lon)];
+     if(coords.every(Number.isFinite)){
+      routeGeoCache[job.query]=coords;
+      ROUTE_POINTS[job.key][1]=coords[0];ROUTE_POINTS[job.key][2]=coords[1];
+      try{localStorage.setItem('tokyo_route_geo_cache_v1',JSON.stringify(routeGeoCache))}catch(e){}
+      if(routeCustomStops.some(s=>s.id===job.key))showDailyRoute();
+     }
+    }else routeGeoCache[job.query]=null;
+   }
+  }catch(e){}
+  if(routeGeocodeQueue.length)await new Promise(resolve=>setTimeout(resolve,1200));
+ }
+ routeGeocoding=false;
+}
+function getFullRouteLegs(date){
+ const base=ROUTE_LEGS[date]||[];
+ const additions=[];
+ const entries=routeCustomStops.filter(s=>s.date===date);
+ for(const entry of entries){
+  const key=entry.id;
+  const query=routeTextPlace(entry);
+  const cached=routeGeoCache[query];
+  ROUTE_POINTS[key]=[entry.title,cached?.[0]??null,cached?.[1]??null];
+  queueRouteGeocode(key,query);
+  const before=additions.length?additions[additions.length-1][2].split(' ').slice(-1)[0]:base[base.length-1]?.[2].split(' ').slice(-1)[0];
+  additions.push(['步行','新增景點：'+entry.title,(before?before+' ':'')+key,'walking']);
+ }
+ return [...base,...additions];
+}
+
 window.addEventListener('load', function(){if(window.L)showDailyRoute()}, {once:true});
 function routeNavUrl(leg){
  const ids=leg[2].split(' '), names=ids.map(k=>encodeURIComponent(ROUTE_POINTS[k][0]));
@@ -244,7 +316,7 @@ function routeNavUrl(leg){
  return u;
 }
 function showDailyRoute(){
- const date=days[active].date,all=ROUTE_LEGS[date]||[],tabs=document.getElementById('routeTabs'),list=document.getElementById('routeList');
+ const date=days[active].date,all=getFullRouteLegs(date),tabs=document.getElementById('routeTabs'),list=document.getElementById('routeList');
  if(!tabs||!list)return;
  document.getElementById('routeCaption').textContent=days[active].title+'｜點選交通方式，查看路線及導航。';
  const modes=['全部',...new Set(all.map(l=>l[0]))];
@@ -257,6 +329,7 @@ function showDailyRoute(){
   const info=document.createElement('div'),title=document.createElement('b'),hint=document.createElement('small');
   title.textContent=(i+1)+'. '+(leg[0]==='步行'?'🚶 ':leg[0]==='跟團'?'🚌 ':'🚆 ')+leg[1];
   hint.textContent=leg[2].split(' ').map(k=>ROUTE_POINTS[k][0]).join(' → ');
+  if(leg[1].startsWith('新增景點：'))hint.textContent+=' · 新增景點若無法自動定位，仍可使用導航連結';
   info.append(title,hint);
   const a=document.createElement('a');a.textContent='Google Maps 導航 ↗';a.href=routeNavUrl(leg);a.target='_blank';a.rel='noopener';
   div.append(info,a);list.append(div);
@@ -271,11 +344,12 @@ function showDailyRoute(){
  routeLayer=L.featureGroup().addTo(routeMap);
  const seen=new Set(),colors={'搭車':'#5072ad','步行':'#3c815c','跟團':'#bd893e'};
  for(const leg of selection){
-  const ids=leg[2].split(' '),positions=ids.map(id=>ROUTE_POINTS[id].slice(1));
-  L.polyline(positions,{color:colors[leg[0]],weight:3,dashArray:'5 7',opacity:.8}).addTo(routeLayer);
+  const ids=leg[2].split(' '),positions=ids.map(id=>ROUTE_POINTS[id]).filter(p=>p&&Number.isFinite(p[1])&&Number.isFinite(p[2])).map(p=>[p[1],p[2]]);
+  if(positions.length>1)L.polyline(positions,{color:colors[leg[0]],weight:3,dashArray:'5 7',opacity:.8}).addTo(routeLayer);
   for(const id of ids){
    if(seen.has(id))continue;
-   seen.add(id);const p=ROUTE_POINTS[id],n=seen.size;
+   const p=ROUTE_POINTS[id];if(!p||!Number.isFinite(p[1])||!Number.isFinite(p[2]))continue;
+   seen.add(id);const n=seen.size;
    L.marker([p[1],p[2]],{icon:L.divIcon({className:'',html:'<span class="map-pin">'+n+'</span>',iconSize:[26,26],iconAnchor:[13,13]})}).bindPopup(p[0]).addTo(routeLayer);
   }
  }
@@ -401,6 +475,7 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
  };
  $('syncTrip').onclick=async()=>{if(!connected)await connect();else if(dirty)await pushState();else await pullState()};
  const oldRenderDay=window.renderDay;
+ window.setRouteCustomStops=function(date,stops){routeCustomStops=stops.map((s,i)=>({...s,date,id:'added-'+date.replace('/','')+'-'+i}));showDailyRoute();};
  function getCustomEvents(){try{return JSON.parse(localStorage.getItem('tokyo_field_custom_events_v1')||'{}')}catch(e){return {}}}
  function getEventEdits(){try{return JSON.parse(localStorage.getItem('tokyo_field_event_edits_v1')||'{}')}catch(e){return {}}}
  function getDeletedBase(){try{return JSON.parse(localStorage.getItem('tokyo_field_deleted_base_v1')||'{}')}catch(e){return {}}}
@@ -469,6 +544,7 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
     }
     window.renderDay();notify(editNotice());
    });
+   window.setRouteCustomStops(date,custom);
  };
  function cleanUrl(value){if(!value)return '';try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:''}catch(e){return ''}}
  function safeHref(value){return cleanUrl(value)||'#'}
