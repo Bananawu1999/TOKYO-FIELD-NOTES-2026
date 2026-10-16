@@ -144,6 +144,14 @@
 body.is-itinerary-dragging{user-select:none;-webkit-user-select:none}
 @media(max-width:480px){#timeline .eventbody{padding:10px 9px}#timeline .event .drag-grip{width:31px;min-width:31px}#timeline .event-titleline{gap:7px}}
 </style>
+<style id="expense-shortcut-style">
+.stats .spend-shortcut{display:block;color:inherit;text-decoration:none;cursor:pointer;transition:background .15s,box-shadow .15s,transform .15s}
+.stats .spend-shortcut:hover,.stats .spend-shortcut:focus-visible{background:var(--green-light);box-shadow:0 3px 14px #29463112}
+.stats .spend-shortcut:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+#budget{scroll-margin-top:115px}
+@media (max-width:850px){#budget{scroll-margin-top:110px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
 </head>
 <body>
 <div class="app">
@@ -164,7 +172,7 @@ body.is-itinerary-dragging{user-select:none;-webkit-user-select:none}
   <div class="stat"><div class="statlabel">TRIP LENGTH</div><strong>6 天 5 夜</strong><small>11 月 17 日 — 11 月 22 日</small></div>
   <div class="stat"><div class="statlabel">TRAVELERS</div><strong>02 人</strong><small>雙人旅行</small></div>
   <div class="stat"><div class="statlabel">PREP CHECKLIST</div><strong id="checkStat">0 / 8</strong><small>出發準備進度</small></div>
-  <div class="stat"><div class="statlabel">RECORDED SPEND</div><strong id="expenseStat">¥0</strong><small>已記錄日幣花費</small></div>
+  <a class="stat spend-shortcut" href="#budget" aria-label="跳到旅費記帳區"><div class="statlabel">RECORDED SPEND ↗</div><strong id="expenseStat">¥0</strong><small>已記錄日幣花費・點擊記帳</small></a>
 </section>
 <section class="cloudpanel" id="tripSyncBar" style="padding:14px 20px">
 <div class="panelhead"><div><div class="kicker">SHARED TRAVEL PLAN</div><div class="sub" id="syncStatus" role="status">正在準備同步功能…</div></div><div class="stopcontrols"><button class="btn primary" id="shareTrip">分享共編連結 ↗</button><button class="btn" id="syncTrip">同步</button></div></div>
