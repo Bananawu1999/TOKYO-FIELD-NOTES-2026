@@ -183,7 +183,7 @@ body.is-itinerary-dragging{user-select:none;-webkit-user-select:none}
  #pdfPrintBook .pdf-footer{font-size:8pt;color:#647569;margin-top:12px}
 }
 </style>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.20/pdfmake.min.js"></script>
+<script defer src="./vendor/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -902,8 +902,7 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
 
  // Native PDF link annotations: unlike browser printing, pdfmake writes /URI
  // links directly into the saved file (works in Acrobat, Files and PDF viewers).
- const pdfFontURL='https://cdn.jsdelivr.net/gh/Darksorrow/pdfmake-font-vfs@main/fonts/NotoSansCJK-Regular.ttf';
- const pdfFonts={NotoCJK:{normal:pdfFontURL,bold:pdfFontURL,italics:pdfFontURL,bolditalics:pdfFontURL}};
+ // The PDF renderer uses browser canvas fonts, so Chinese and Japanese do not require downloads.
  const pdfPlace=stop=>{
   try{
    const u=new URL(stop.url||'');
@@ -963,27 +962,162 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
    footer:(current,pageCount)=>({text:current+' / '+pageCount,alignment:'right',fontSize:8,color:'#77867a',margin:[0,8,40,0]})
   };
  }
- $('exportPdf').addEventListener('click',()=>{
-  const button=$('exportPdf'),name='TOKYO-FIELD-NOTES-2026-六天行程.pdf';
-  if(!window.pdfMake){
-   alert('PDF 產生元件還沒載入成功，請確認網路後重新整理。也可以先使用「列印備用」。');return;
-  }
-  button.disabled=true;button.textContent='正在建立可點擊連結的 PDF…';
-  try{
-   const definition=generateLinkedTripPDF();
-   // Use a single CJK font so Traditional Chinese and Japanese stay readable.
-   const pdf=window.pdfMake.createPdf(definition,null,pdfFonts);
-   pdf.getBlob(blob=>{
-    button.disabled=false;button.textContent='下載六天 PDF（可點地圖）↗';
-    const url=URL.createObjectURL(blob),a=document.createElement('a');
-    a.href=url;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),60000);
-    notify('PDF 已建立，地圖連結可在 PDF 閱讀器內點擊');
+
+ // Self-hosted PDF renderer. Text is drawn with the browser's CJK fonts while
+ // jsPDF creates actual PDF URI annotations over all displayed links.
+ function exportLinkedPDF(){
+  if(!window.jspdf?.jsPDF)throw new Error('內建 PDF 程式尚未載入，請重新整理後再試');
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'portrait',unit:'pt',format:'a4',compress:true});
+  const W=595.28,H=841.89,margin=38,right=W-margin,usable=right-margin;
+  const resolution=2;
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.round(W*resolution);
+  canvas.height=Math.round(H*resolution);
+  const ctx=canvas.getContext('2d',{alpha:false});
+  if(!ctx)throw new Error('無法啟用 PDF 繪圖畫布');
+  ctx.scale(resolution,resolution);
+  const cjk='-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
+  let page=0,y=0;
+  let annotations=[];
+  const font=(size,bold=false)=>{ctx.font=(bold?'700 ':'400 ')+size+'px '+cjk};
+  const fill=(text,x,top,size=10,bold=false,color='#2c4235')=>{
+   ctx.fillStyle=color;font(size,bold);ctx.textBaseline='top';ctx.fillText(String(text),x,top);
+  };
+  const wrap=(text,width,size=10,bold=false)=>{
+   font(size,bold);const lines=[];
+   for(const paragraph of String(text??'').split('\n')){
+    if(!paragraph){lines.push('');continue}
+    let line='';
+    for(const ch of paragraph){
+     if(line&&ctx.measureText(line+ch).width>width){lines.push(line);line=ch}
+     else line+=ch;
+    }
+    lines.push(line);
+   }
+   return lines;
+  };
+  const setBg=()=>{ctx.fillStyle='#fffefa';ctx.fillRect(0,0,W,H)};
+  const addPage=()=>{
+   if(page>0)finishPage();
+   ctx.clearRect(0,0,W,H);setBg();page++;y=margin;
+  };
+  const finishPage=()=>{
+   fill('TOKYO FIELD NOTES 2026',margin,H-27,8,false,'#76877a');
+   fill(String(page),right-13,H-27,8,false,'#76877a');
+   const image=canvas.toDataURL('image/jpeg',0.91);
+   if(page>1)pdf.addPage();
+   pdf.addImage(image,'JPEG',0,0,W,H);
+   for(const l of annotations)pdf.link(l.x,l.y,l.w,l.h,{url:l.url});
+   annotations=[];
+  };
+  const lines=(text,size=10,lineHeight=1.45,bold=false,color='#445449',maxWidth=usable)=>{
+   const pieces=wrap(text,maxWidth,size,bold),height=size*lineHeight;
+   for(const part of pieces){
+    if(y+height>H-margin-20)addPage();
+    fill(part,margin,y,size,bold,color);y+=height;
+   }
+   return pieces.length*height;
+  };
+  const richLines=(text,x,top,width,size=9,bold=false,color='#56665c')=>{
+   const rows=wrap(text,width,size,bold);
+   rows.forEach((r,j)=>fill(r,x,top+j*size*1.5,size,bold,color));
+   return rows.length*size*1.5;
+  };
+  const place=(stop)=>{
+   try{
+    const u=new URL(stop.url||'');
+    const query=u.searchParams.get('query')||u.searchParams.get('q');
+    if(query)return query;
+    const path=decodeURIComponent(u.pathname||'');
+    if(path.includes('/place/'))return path.split('/place/')[1].split('/')[0].replaceAll('+',' ');
+   }catch(e){}
+   return stop.title+' 日本';
+  };
+  const safe=(u)=>{
+   try{const q=new URL(u);return ['http:','https:'].includes(q.protocol)?q.href:null}catch(e){return null}
+  };
+  const link=(label,url,x,top)=>{
+   font(9,true);
+   const width=ctx.measureText(label).width+5;
+   fill(label,x,top,9,true,'#146e62');
+   ctx.strokeStyle='#146e62';ctx.lineWidth=.5;ctx.beginPath();
+   ctx.moveTo(x,top+12);ctx.lineTo(x+width-5,top+12);ctx.stroke();
+   annotations.push({x,y:top-2,w:width,h:16,url});
+   return width;
+  };
+  addPage();
+  fill('TOKYO FIELD NOTES 2026',margin,y,11,true,'#446f59');y+=22;
+  fill('東京自由行｜六天完整行程',margin,y,21,true);y+=34;
+  fill('2026/11/17 – 11/22　｜　DAY 01–06',margin,y,10,false,'#688073');y+=20;
+  fill('地圖和下一站導航均可點擊（需連線）',margin,y,10,false,'#688073');y+=32;
+  days.forEach((day,i)=>{
+   if(i>0)addPage();
+   fill('DAY '+String(i+1).padStart(2,'0')+'　|　2026/'+day.date,margin,y,11,true,'#426a52');y+=23;
+   lines(day.title,16,1.4,true,'#283c30');y+=5;
+   if(day.sub){lines(day.sub,9,1.5,false,'#54705f');y+=9;}
+   ctx.strokeStyle='#668975';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(margin,y);ctx.lineTo(right,y);ctx.stroke();y+=14;
+   if(day.note){
+    const note=wrap(day.note,usable-20,9);
+    const hh=note.length*13.5+17;
+    if(y+hh>H-margin-26)addPage();
+    ctx.fillStyle='#f2f6ef';ctx.fillRect(margin,y,usable,hh);
+    note.forEach((t,j)=>fill(t,margin+10,y+8+j*13.5,9,false,'#566b5c'));
+    y+=hh+11;
+   }
+   const stops=dayStops(day.date);
+   if(!stops.length)lines('本日尚無景點。',10);
+   stops.forEach((stop,index)=>{
+    const timeWidth=81,bodyX=margin+timeWidth,bodyWidth=usable-timeWidth;
+    const titleRows=wrap(stop.title,bodyWidth,11,true);
+    const descRows=stop.desc?wrap(stop.desc,bodyWidth,9,false):[];
+    const cardH=titleRows.length*16+descRows.length*13.5+33;
+    if(y+cardH>H-margin-26){
+     addPage();
+     fill('DAY '+String(i+1).padStart(2,'0')+'　｜　'+day.title+'（續）',margin,y,11,true,'#426a52');y+=26;
+    }
+    const top=y;
+    ctx.strokeStyle='#e2e9e1';ctx.lineWidth=.65;ctx.beginPath();ctx.moveTo(margin,top);ctx.lineTo(right,top);ctx.stroke();
+    const timeRows=wrap(stop.time||'未定',timeWidth-6,9,true);
+    timeRows.forEach((s,k)=>fill(s,margin,top+9+k*13,9,true,'#416b52'));
+    titleRows.forEach((s,k)=>fill(s,bodyX,top+7+k*16,11,true));
+    let offset=top+9+titleRows.length*16;
+    descRows.forEach((s,k)=>fill(s,bodyX,offset+k*13.5,9,false,'#607266'));
+    offset+=descRows.length*13.5+7;
+    const stored=safe(stop.url),saved=stored?new URL(stored):null;
+    const mapURL=saved&&(saved.host==='maps.app.goo.gl'||(saved.host.includes('google.')&&saved.pathname.includes('/maps/')))
+     ?stored:'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(place(stop));
+    let x=bodyX;
+    x+=link('開啟 Google Maps',mapURL,x,offset)+13;
+    if(index+1<stops.length){
+     const next=stops[index+1];
+     const nav='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(place(stop))+'&destination='+encodeURIComponent(place(next))+'&travelmode=transit';
+     link('下一站導航',nav,x,offset);
+    }
+    y=offset+23;
    });
-  }catch(error){
-   console.error('Linked PDF generation failed',error);
+   y+=13;
+  });
+  finishPage();
+  pdf.setProperties({title:'TOKYO FIELD NOTES 2026｜六天旅遊行程',subject:'含可點擊 Google Maps 及導航連結'});
+  pdf.save('TOKYO-FIELD-NOTES-2026-六天行程.pdf');
+  return page;
+ }
+ $('exportPdf').addEventListener('click',()=>{
+  const button=$('exportPdf');
+  if(!window.jspdf?.jsPDF){
+   alert('PDF 程式尚未載入。請重新整理後再試；如果仍有問題，可先使用「列印備用」。');
+   return;
+  }
+  button.disabled=true;button.textContent='正在建立六天 PDF…';
+  try{
+   const n=exportLinkedPDF();
+   notify('已產生 '+n+' 頁 PDF；地圖連結可點擊');
+  }catch(e){
+   console.error('PDF export failed',e);
+   alert('PDF 匯出時發生錯誤：'+(e?.message||String(e)));
+  }finally{
    button.disabled=false;button.textContent='下載六天 PDF（可點地圖）↗';
-   alert('產生 PDF 失敗：'+(error?.message||String(error))+'。請先使用列印備用。');
   }
  });
  $('printPdfFallback').addEventListener('click',()=>{renderCompletePrint();window.print()});
