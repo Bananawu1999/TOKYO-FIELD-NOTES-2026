@@ -391,6 +391,38 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
  const hashSecret=new URLSearchParams(location.hash.slice(1)).get('share')||'';
  secret=hashSecret||localStorage.getItem('tokyo_trip_share_secret_v1')||'';
  if(hashSecret)localStorage.setItem('tokyo_trip_share_secret_v1',hashSecret);
+
+ // One-time move of the existing 11/20 and 11/21 user changes with their swapped itineraries.
+ // A marker stored in customEvents prevents repeated swaps across devices.
+ const swapMarker='__swapped_20261120_20261121_v1';
+ function migrateDaySwap(state){
+  const source=state||{},custom=source.customEvents&&typeof source.customEvents==='object'?source.customEvents:{};
+  if(custom[swapMarker])return source;
+  for(const name of ['customEvents','eventEdits','deletedBase']){
+   const group=source[name]&&typeof source[name]==='object'?source[name]:{};
+   const old20=group['11/20'],old21=group['11/21'];
+   if(old21===undefined)delete group['11/20'];else group['11/20']=old21;
+   if(old20===undefined)delete group['11/21'];else group['11/21']=old20;
+   source[name]=group;
+  }
+  source.customEvents[swapMarker]=true;
+  return source;
+ }
+ const migrationKeys=['customEvents','eventEdits','deletedBase'];
+ const readForMigration=()=>{
+  const s={};
+  for(const name of migrationKeys){
+   const i=names.indexOf(name);
+   try{s[name]=JSON.parse(localStorage.getItem(keys[i])||fallback[i])}catch{s[name]={}}
+  }
+  return s;
+ };
+ const initialSwap=readForMigration();
+ if(!initialSwap.customEvents?.[swapMarker]){
+  migrateDaySwap(initialSwap);
+  for(const name of migrationKeys)localStorage.setItem(keys[names.indexOf(name)],JSON.stringify(initialSwap[name]));
+ }
+
  const currentState=()=>Object.fromEntries(keys.map((k,i)=>{let x;try{x=JSON.parse(localStorage.getItem(k)||fallback[i])}catch{x=JSON.parse(fallback[i])}return [names[i],x]}));
  const editNotice=()=>connected?'已儲存，正在同步…':'已儲存於目前裝置';
  const canEdit=()=>true;
@@ -417,7 +449,7 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
   if(error||!data){status('共編讀取失敗：'+(error?.message||'密鑰無效'));return}
   if(data.revision===revision)return;
   revision=data.revision;
-  const s=data.state||{};
+  const s=migrateDaySwap(data.state||{});
   const payload=keys.map((k,i)=>[k,JSON.stringify(s[names[i]]??JSON.parse(fallback[i]))]);
   if(!payload.some(([k,v])=>localStorage.getItem(k)!==v)){status('共編已更新至最新版本');return}
   applyingRemote=true;
