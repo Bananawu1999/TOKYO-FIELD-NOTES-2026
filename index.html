@@ -122,6 +122,28 @@
 .route-note{font-size:11px;color:var(--muted);margin-top:9px}.map-pin{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#355b49;border:2px solid white;color:white;font-weight:bold;box-shadow:0 1px 5px #0004}
 @media(max-width:480px){.daily-route{padding:12px}#dailyRouteMap{height:240px}}
 </style>
+
+<style id="drag-planner-styles">
+.drag-instruction{font-size:11px;color:var(--muted);padding:6px 3px 12px;line-height:1.6}
+#timeline .event{grid-template-columns:55px 10px minmax(0,1fr)}
+#timeline .eventbody{position:relative;border:1px solid #e2e9df;background:#fffefa;border-radius:13px;padding:12px 10px 12px 13px;margin:3px 0 7px;box-shadow:0 3px 10px #2b3b3008}
+#timeline .eventbody:hover{border-color:#cad9cb}
+#timeline .event{padding-bottom:3px}
+#timeline .etime{padding-top:14px;overflow-wrap:anywhere}
+#timeline .event .rail:before{bottom:-8px}
+#timeline .event .drag-grip{touch-action:none;user-select:none;-webkit-user-select:none;border:1px solid #e1e7e0;border-radius:10px;width:34px;min-width:34px;min-height:39px;display:grid;place-items:center;flex-shrink:0;background:#f1f5ef;color:#355b49;font-size:20px;cursor:grab;line-height:1}
+#timeline .event .drag-grip:active{cursor:grabbing}
+#timeline .event-titleline{display:flex;align-items:flex-start;gap:9px}
+#timeline .event-main{flex:1;min-width:0}
+#timeline .event.drag-hover-before .eventbody:before,#timeline .event.drag-hover-after .eventbody:after{content:"";position:absolute;left:0;right:0;height:3px;background:var(--green);border-radius:5px}
+#timeline .event.drag-hover-before .eventbody:before{top:-9px}
+#timeline .event.drag-hover-after .eventbody:after{bottom:-9px}
+.drag-ghost{position:fixed;z-index:800;pointer-events:none;max-height:155px;overflow:hidden;background:#f2f7ee;border:2px solid #355b49;box-shadow:0 14px 35px #0003;border-radius:15px;padding:12px 14px;transform:translate(-50%,-40%);opacity:.96;font-weight:750;font-size:14px}
+.drag-day-toast{position:fixed;top:65px;left:50%;transform:translateX(-50%);z-index:801;border-radius:99px;background:#355b49;color:#fff;padding:10px 17px;font-size:12px;font-weight:750;pointer-events:none;box-shadow:0 5px 18px #0003;white-space:nowrap}
+.drag-day-toast[hidden]{display:none}
+body.is-itinerary-dragging{user-select:none;-webkit-user-select:none}
+@media(max-width:480px){#timeline .eventbody{padding:10px 9px}#timeline .event .drag-grip{width:31px;min-width:31px}#timeline .event-titleline{gap:7px}}
+</style>
 </head>
 <body>
 <div class="app">
@@ -157,7 +179,7 @@
   <main class="main">
     <section class="panel" id="itinerary">
       <div class="panelhead"><div><div class="kicker" id="dayEyebrow">DAY 01 · TUESDAY</div><h2 id="dayTitle">抵達東京・城市暖身</h2><div class="sub" id="daySub">11 月 17 日｜11:00 抵達羽田機場</div></div><span class="tag" id="dayPill">東京</span></div>
-      <button type="button" id="quickAddStop">＋ 新增景點</button><div class="timeline" id="timeline"></div>
+      <button type="button" id="quickAddStop">＋ 新增景點</button><div class="drag-instruction">☷ 按住景點左側把手上下拖曳排序；拖往螢幕左／右側可移到其他日期。移動後請檢查原訂時間。</div><div class="timeline" id="timeline"></div>
       <div class="stopform"><h3>＋ 新增景點</h3><div class="stopgrid"><input id="customTime" placeholder="時間，例如 15:30"><input id="customTitle" placeholder="景點名稱（必填）"><input id="customUrl" placeholder="地圖／資訊網址（選填）"><textarea id="customDesc" rows="2" placeholder="景點備註、交通或集合提醒"></textarea></div><div class="stopcontrols"><button class="btn primary" id="addCustomStop">新增景點</button><span class="sub">可以直接新增、編輯與刪除景點；未設定雲端時只保存在目前裝置。</span></div></div>
       <div class="note" id="dayNote"></div>
 <section class="daily-route" id="dailyRoute"><div class="kicker">DAY ROUTE MAP</div><h3>今日搭車與逛街路線</h3><p id="routeCaption"></p><div id="dailyRouteMap">地圖載入中，仍可使用下方 Google Maps 導航。</div><div id="routeTabs" class="route-tabs"></div><div id="routeList" class="route-list"></div><div class="route-note">地圖虛線僅表示景點間的先後位置，不是實際道路或車班。請點「Google Maps 導航」確認當天路線與交通時間。</div></section>
@@ -292,20 +314,36 @@ async function drainRouteGeocode(){
  }
  routeGeocoding=false;
 }
+
 function getFullRouteLegs(date){
- const base=ROUTE_LEGS[date]||[];
- const additions=[];
- const entries=routeCustomStops.filter(s=>s.date===date);
- for(const entry of entries){
-  const key=entry.id;
-  const query=routeTextPlace(entry);
+ const live=window.routeLiveStops?.[date];
+ if(!live)return ROUTE_LEGS[date]||[];
+ const markers=[];
+ const normalize=s=>String(s||'').toLowerCase().replace(/\s/g,'');
+ for(let i=0;i<live.length;i++){
+  const stop=live[i],key='route-'+stop.ref.replaceAll('|','-').replaceAll('/','');
+  const query=routeTextPlace(stop);
+  const q=normalize(query),title=normalize(stop.title);
+  let found=null;
+  for(const [name,p] of Object.entries(ROUTE_POINTS)){
+   if(name.startsWith('route-')||name.startsWith('added-'))continue;
+   const pn=normalize(p[0]);if(pn&&(title.includes(pn)||pn.includes(title)||(q.includes(pn)&&pn.length>=4))){found=p;break}
+  }
   const cached=routeGeoCache[query];
-  ROUTE_POINTS[key]=[entry.title,cached?.[0]??null,cached?.[1]??null];
-  queueRouteGeocode(key,query);
-  const before=additions.length?additions[additions.length-1][2].split(' ').slice(-1)[0]:base[base.length-1]?.[2].split(' ').slice(-1)[0];
-  additions.push(['步行','新增景點：'+entry.title,(before?before+' ':'')+key,'walking']);
+  ROUTE_POINTS[key]=[stop.title,cached?.[0]??found?.[1]??null,cached?.[1]??found?.[2]??null];
+  // Only geocode actual map-linked or named stops, not generic travel blocks.
+  if(!found&&!cached&&(stop.url||'').includes('google.com/maps'))queueRouteGeocode(key,query);
+  markers.push(key);
  }
- return [...base,...additions];
+ const list=[];
+ for(let i=1;i<markers.length;i++){
+  const a=ROUTE_POINTS[markers[i-1]],b=ROUTE_POINTS[markers[i]];
+  const located=[a,b].every(p=>Number.isFinite(p[1])&&Number.isFinite(p[2]));
+  const km=located?Math.hypot((a[1]-b[1])*111,(a[2]-b[2])*90):Infinity;
+  const mode=km<=1.8?'步行':'搭車';
+  list.push([mode,a[0]+' → '+b[0],markers[i-1]+' '+markers[i],mode==='步行'?'walking':'transit']);
+ }
+ return list;
 }
 
 window.addEventListener('load', function(){if(window.L)showDailyRoute()}, {once:true});
@@ -324,6 +362,14 @@ function showDailyRoute(){
  tabs.replaceChildren();list.replaceChildren();
  for(const mode of modes){const b=document.createElement('button');b.type='button';b.className='route-tab'+(mode===routeMode?' active':'');b.textContent=mode;b.onclick=()=>{routeMode=mode;showDailyRoute()};tabs.append(b)}
  const selection=all.filter(l=>routeMode==='全部'||l[0]===routeMode);
+ const live=window.routeLiveStops?.[date];
+ if(live?.length>1){
+  const first=live[0],last=live[live.length-1];
+  const search=s=>encodeURIComponent(routeTextPlace(s));
+  const places=live.slice(1,-1).slice(0,7).map(search);
+  const url='https://www.google.com/maps/dir/?api=1&origin='+search(first)+'&destination='+search(last)+'&travelmode=transit'+(places.length?'&waypoints='+places.join('%7C'):'');
+  const whole=document.getElementById('routeWhole');if(whole)whole.href=url;
+ }
  selection.forEach((leg,i)=>{
   const div=document.createElement('div');div.className='route-row';
   const info=document.createElement('div'),title=document.createElement('b'),hint=document.createElement('small');
@@ -382,9 +428,9 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
  // Add only a Supabase Project URL and public publishable / anon key after project setup.
  const CONFIG={url:'https://nhrvjxmrhontmpmfqyjq.supabase.co',anonKey:'sb_publishable_Ii6rAbwxlme7qe7IEFWWdg_SJexsptD'};
  const $=id=>document.getElementById(id);
- const names=['checks','expenses','customEvents','eventEdits','deletedBase'];
- const keys=['tokyo_field_checks_v1','tokyo_field_expenses_v1','tokyo_field_custom_events_v1','tokyo_field_event_edits_v1','tokyo_field_deleted_base_v1'];
- const fallback=['{}','[]','{}','{}','{}'];
+ const names=['checks','expenses','customEvents','eventEdits','deletedBase','routeOrder'];
+ const keys=['tokyo_field_checks_v1','tokyo_field_expenses_v1','tokyo_field_custom_events_v1','tokyo_field_event_edits_v1','tokyo_field_deleted_base_v1','tokyo_field_route_order_v1'];
+ const fallback=['{}','[]','{}','{}','{}','{}'];
  let client=null,secret='',revision=0,connected=false,applyingRemote=false,dirty=false,busy=false,blocked=false,syncTimer=null;
  const status=s=>{$('syncStatus').textContent=s};
  const configured=()=>CONFIG.url.startsWith('https://')&&!!CONFIG.anonKey&&!!window.supabase;
@@ -474,7 +520,7 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
   const {data,error}=await client.rpc('tokyo_read',{p_token:secret});
   if(error||!data){connected=false;status('共編無法連線：'+(error?.message||'連結密鑰不正確'));return false}
   revision=data.revision;connected=true;blocked=false;
-  const hasSaved=keys.some(k=>{const v=localStorage.getItem(k);return v!==null&&v!==['{}','[]','{}','{}','{}'][keys.indexOf(k)]});
+  const hasSaved=keys.some(k=>{const v=localStorage.getItem(k);return v!==null&&v!==fallback[keys.indexOf(k)]});
   if(revision===0&&Object.keys(data.state||{}).length===0&&hasSaved&&!localStorage.getItem('tokyo_trip_seed_prompted_v1')){localStorage.setItem('tokyo_trip_seed_prompted_v1','1');
    if(confirm('共編資料庫目前是空的。要以這台裝置的現有行程編輯、待辦與記帳初始化嗎？')){dirty=true;await pushState()}
    else{revision=-1;await pullState()}
@@ -538,7 +584,7 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
   const u=$('sheetURL').value.trim(),url=cleanUrl(u);
   if(u&&!url){notify('請輸入正確的 http 或 https 網址');return}
   const item={time:$('sheetTime').value.trim()||'未定',title,desc:$('sheetDesc').value.trim(),url};
-  const date=days[active].date;
+  const date=editingStop?.date||days[active].date;
   if(!editingStop){
    const list=getCustomEvents();list[date]=list[date]||[];list[date].push(item);
    localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list));
@@ -552,31 +598,165 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
   }
   closeSheet();window.renderDay();notify(editNotice());
  };
- window.renderDay=function(){
-   oldRenderDay();
-   const day=days[active],date=day.date,events=getCustomEvents()[date]||[],edits=getEventEdits(),deleted=getDeletedBase();
-   const timeline=$('timeline');
-   const base=day.events.map((e,i)=>({id:'base-'+i,time:e[0],title:e[1],desc:e[2],url:e[3]}))
-      .filter(e=>!(deleted[date]||[]).includes(e.id))
-      .map(e=>({...e,...(edits[date]||{})[e.id]}));
-   const custom=events.map((e,i)=>({...e,id:'custom-'+i}));
-   const all=[...base,...custom].sort((a,b)=>String(a.time||'').localeCompare(String(b.time||''),'zh-Hant',{numeric:true}));
-   timeline.innerHTML=all.map(e=>`<div class="event"><div class="etime">${esc(e.time||'未定')}</div><div class="rail"><span class="dot"></span></div><div class="eventbody"><h3>${esc(e.title)}</h3>${e.desc?'<p>'+esc(e.desc)+'</p>':''}<div class="eventlinks">${e.url?'<a class="minilink" href="'+safeHref(e.url)+'" target="_blank" rel="noopener">📍 地圖 ↗</a>':''}<button class="minilink" type="button" data-stopedit="${e.id}">編輯</button><button class="minilink" type="button" data-stopdelete="${e.id}">刪除</button></div></div></div>`).join('');
-   timeline.querySelectorAll('[data-stopedit]').forEach(b=>b.onclick=()=>openSheet(all.find(e=>e.id===b.dataset.stopedit)));
-   timeline.querySelectorAll('[data-stopdelete]').forEach(b=>b.onclick=()=>{
-    const id=b.dataset.stopdelete,e=all.find(x=>x.id===id);
-    if(!confirm('確定刪除「'+(e?.title||'此景點')+'」？'))return;
-    if(id.startsWith('base-')){
-      const del=getDeletedBase();del[date]=[...(del[date]||[]),id].filter((x,i,a)=>a.indexOf(x)===i);
-      localStorage.setItem('tokyo_field_deleted_base_v1',JSON.stringify(del));
-    }else{
-      const list=getCustomEvents(),arr=list[date]||[];
-      arr.splice(Number(id.slice(7)),1);list[date]=arr;
-      localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list));
-    }
-    window.renderDay();notify(editNotice());
+
+ const orderKey='tokyo_field_route_order_v1';
+ const readOrder=()=>{try{return JSON.parse(localStorage.getItem(orderKey)||'{}')}catch(e){return {}}};
+ const sourceRef=(date,id)=>date+'|'+id;
+ function allSourceStops(){
+  const custom=getCustomEvents(),edits=getEventEdits(),deleted=getDeletedBase(),result={};
+  days.forEach(d=>{
+   const date=d.date;
+   d.events.forEach((e,i)=>{
+    const id='base-'+i;
+    if((deleted[date]||[]).includes(id))return;
+    const stop={id,origin:date,ref:sourceRef(date,id),time:e[0],title:e[1],desc:e[2],url:e[3]};
+    result[stop.ref]={...stop,...(edits[date]||{})[id]};
    });
-   window.setRouteCustomStops(date,custom);
+   (custom[date]||[]).forEach((e,i)=>{
+    if(!e||typeof e!=='object')return;
+    const id='custom-'+i,ref=sourceRef(date,id);
+    result[ref]={...e,id,ref,origin:date};
+   });
+  });
+  return result;
+ }
+ function boardForAllDays(){
+  const refs=allSourceStops(),saved=readOrder(),claimed=new Set(),result={};
+  for(const d of days)result[d.date]=[];
+  // Honour explicit positions first; a moved stop appears on exactly one date.
+  for(const d of days){
+   const stored=Array.isArray(saved[d.date])?saved[d.date]:[];
+   for(const ref of stored)if(refs[ref]&&!claimed.has(ref)){result[d.date].push(ref);claimed.add(ref)}
+  }
+  // New and existing unsorted stops go to their original days; retain original time sequence.
+  for(const d of days){
+   const remaining=Object.values(refs).filter(s=>s.origin===d.date&&!claimed.has(s.ref));
+   remaining.sort((a,b)=>String(a.time||'').localeCompare(String(b.time||''),'zh-Hant',{numeric:true}));
+   for(const s of remaining){result[d.date].push(s.ref);claimed.add(s.ref)}
+  }
+  return {refs,order:result};
+ }
+ function dayStops(date){const b=boardForAllDays();return b.order[date].map(ref=>b.refs[ref]).filter(Boolean)}
+ function storeBoard(board){localStorage.setItem(orderKey,JSON.stringify(board))}
+ function escapeAttribute(value){return esc(String(value))}
+ let moveGesture=null,edgeTimer=null;
+ const dragToast=document.createElement('div');dragToast.className='drag-day-toast';dragToast.hidden=true;
+ document.body.appendChild(dragToast);
+ const cancelEdge=()=>{if(edgeTimer)clearTimeout(edgeTimer);edgeTimer=null};
+ function dragFeedback(){
+  if(!moveGesture)return;
+  dragToast.hidden=false;
+  dragToast.textContent='移動「'+moveGesture.title+'」→ '+days[active].date+'　｜　靠左右邊緣換天';
+ }
+ function endMove(event,cancel=false){
+  const g=moveGesture;if(!g)return;
+  cancelEdge();moveGesture=null;
+  document.removeEventListener('pointermove',movePointer);
+  document.removeEventListener('pointerup',finishPointer);
+  document.removeEventListener('pointercancel',cancelPointer);
+  document.body.classList.remove('is-itinerary-dragging');
+  document.querySelectorAll('.drag-hover-before,.drag-hover-after').forEach(el=>el.classList.remove('drag-hover-before','drag-hover-after'));
+  if(g.ghost)g.ghost.remove();
+  dragToast.hidden=true;
+  if(!g.started||cancel)return;
+  const board=boardForAllDays().order;
+  for(const date of Object.keys(board))board[date]=board[date].filter(ref=>ref!==g.ref);
+  const nodes=[...document.querySelectorAll('#timeline .event[data-stopref]')].filter(e=>e.dataset.stopref!==g.ref);
+  const y=event.clientY;
+  let index=nodes.findIndex(e=>y<e.getBoundingClientRect().top+e.getBoundingClientRect().height/2);
+  if(index<0)index=nodes.length;
+  // Count only visible remaining cards: prevents misplaced insertion in the source day.
+  board[days[active].date].splice(Math.min(index,board[days[active].date].length),0,g.ref);
+  storeBoard(board);window.renderNav();window.renderDay();
+  notify('已移動景點並更新路線；請確認時間是否需要調整');
+ }
+ function cancelPointer(e){if(moveGesture&&e.pointerId===moveGesture.pointerId)endMove(e,true)}
+ function finishPointer(e){if(moveGesture&&e.pointerId===moveGesture.pointerId)endMove(e,false)}
+ function movePointer(e){
+  const g=moveGesture;
+  if(!g||e.pointerId!==g.pointerId)return;
+  if(!g.started){
+   if(Math.hypot(e.clientX-g.startX,e.clientY-g.startY)<7)return;
+   g.started=true;
+   document.body.classList.add('is-itinerary-dragging');
+   const ghost=document.createElement('div');ghost.className='drag-ghost';ghost.style.width=Math.min(window.innerWidth-35,340)+'px';
+   ghost.textContent='☷ '+g.title;document.body.appendChild(ghost);g.ghost=ghost;
+   dragFeedback();
+  }
+  e.preventDefault();
+  g.ghost.style.left=e.clientX+'px';g.ghost.style.top=e.clientY+'px';
+  const nextIndex=e.clientX<52?active-1:e.clientX>window.innerWidth-52?active+1:-1;
+  if(nextIndex!==g.edgeIndex){
+   cancelEdge();g.edgeIndex=nextIndex;
+   if(nextIndex>=0&&nextIndex<days.length){
+    dragToast.textContent='保持在邊緣，切換到 '+days[nextIndex].date;
+    edgeTimer=setTimeout(()=>{
+     if(moveGesture!==g)return;
+     active=nextIndex;g.edgeIndex=-1;
+     window.renderNav();window.renderDay();document.getElementById('expenseDay').value=days[active].date;
+     dragFeedback();
+    },650);
+   }else dragFeedback();
+  }
+  document.querySelectorAll('#timeline .event.drag-hover-before,#timeline .event.drag-hover-after').forEach(el=>el.classList.remove('drag-hover-before','drag-hover-after'));
+  const cards=[...document.querySelectorAll('#timeline .event[data-stopref]')].filter(el=>el.dataset.stopref!==g.ref);
+  const hover=cards.find(el=>e.clientY<el.getBoundingClientRect().bottom);
+  if(hover)hover.classList.add(e.clientY<hover.getBoundingClientRect().top+hover.offsetHeight/2?'drag-hover-before':'drag-hover-after');
+ }
+ function startPointer(e){
+  if(e.button!==undefined&&e.button!==0)return;
+  if(moveGesture)endMove(e,true);
+  const card=e.currentTarget.closest('.event[data-stopref]');
+  const entry=boardForAllDays().refs[card?.dataset.stopref];
+  if(!entry)return;
+  moveGesture={ref:entry.ref,title:entry.title,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,started:false,edgeIndex:-1,ghost:null};
+  document.addEventListener('pointermove',movePointer,{passive:false});
+  document.addEventListener('pointerup',finishPointer);
+  document.addEventListener('pointercancel',cancelPointer);
+ }
+ function editStop(e){
+  // Edit the original entry even after it has moved to a different day.
+  editingStop={id:e.id,date:e.origin};
+  $('editorHeading').textContent='編輯景點';
+  editField('sheetTime',e.time);
+  editField('sheetTitle',e.title);
+  editField('sheetURL',e.url);
+  editField('sheetDesc',e.desc);
+  sheet.hidden=false;document.body.style.overflow='hidden';$('sheetTitle').focus();
+ }
+ function deleteStop(e){
+  if(!confirm('確定刪除「'+e.title+'」？'))return;
+  const date=e.origin,id=e.id;
+  if(id.startsWith('base-')){
+   const deleted=getDeletedBase();deleted[date]=[...new Set([...(deleted[date]||[]),id])];
+   localStorage.setItem('tokyo_field_deleted_base_v1',JSON.stringify(deleted));
+  }else{
+   const list=getCustomEvents(),arr=list[date]||[],index=Number(id.slice(7));
+   arr.splice(index,1);list[date]=arr;localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list));
+   // Rebase indices for the remaining custom entries (their storage is array-indexed).
+   const state=readOrder(),oldPrefix=date+'|custom-';
+   for(const d of days){
+    if(!Array.isArray(state[d.date]))continue;
+    state[d.date]=state[d.date].map(ref=>{
+     if(!ref.startsWith(oldPrefix))return ref;
+     const ix=Number(ref.slice(oldPrefix.length));
+     return ix>index?oldPrefix+(ix-1):ref;
+    }).filter(ref=>ref!==sourceRef(date,id));
+   }
+   storeBoard(state);
+  }
+  window.renderDay();notify(editNotice());
+ }
+ window.renderDay=function(){
+  oldRenderDay();
+  const date=days[active].date,all=dayStops(date),timeline=$('timeline');
+  timeline.innerHTML=all.map(e=>`<div class="event" data-stopref="${escapeAttribute(e.ref)}"><div class="etime">${esc(e.time||'未定')}</div><div class="rail"><span class="dot"></span></div><div class="eventbody"><div class="event-titleline"><button type="button" class="drag-grip" aria-label="拖曳移動 ${escapeAttribute(e.title)}" title="按住拖曳上下排序，靠左／右邊緣換天">☷</button><div class="event-main"><h3>${esc(e.title)}</h3>${e.desc?'<p>'+esc(e.desc)+'</p>':''}</div></div><div class="eventlinks">${e.url?'<a class="minilink" href="'+safeHref(e.url)+'" target="_blank" rel="noopener">📍 地圖 ↗</a>':''}<button class="minilink" type="button" data-stopedit>編輯</button><button class="minilink" type="button" data-stopdelete>刪除</button></div></div></div>`).join('');
+  timeline.querySelectorAll('.drag-grip').forEach(b=>b.addEventListener('pointerdown',startPointer));
+  timeline.querySelectorAll('[data-stopedit]').forEach(b=>b.onclick=()=>editStop(all.find(e=>e.ref===b.closest('[data-stopref]').dataset.stopref)));
+  timeline.querySelectorAll('[data-stopdelete]').forEach(b=>b.onclick=()=>deleteStop(all.find(e=>e.ref===b.closest('[data-stopref]').dataset.stopref)));
+  window.routeLiveStops=window.routeLiveStops||{};
+  window.routeLiveStops[date]=all.map(e=>({ref:e.ref,title:e.title,url:e.url||'',desc:e.desc||'',time:e.time||'',date}));
+  showDailyRoute();
  };
  function cleanUrl(value){if(!value)return '';try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:''}catch(e){return ''}}
  function safeHref(value){return cleanUrl(value)||'#'}
