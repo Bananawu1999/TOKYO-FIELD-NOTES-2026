@@ -930,8 +930,12 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
    if(day.note)content.push({text:day.note,fontSize:9,color:'#526659',margin:[0,0,0,11]});
    if(!stops.length)content.push({text:'本日尚無行程',fontSize:10,margin:[0,12,0,12]});
    stops.forEach((stop,index)=>{
-    const dest=pdfSafeLink(stop.url)||('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(pdfPlace(stop)));
+    // Use an actual Google Maps link; preserve restaurant websites separately.
+    const saved=pdfSafeLink(stop.url),sourceURL=saved?new URL(saved):null;
+    const isMaps=Boolean(sourceURL&&(sourceURL.host==='maps.app.goo.gl'||(sourceURL.host.includes('google.')&&sourceURL.pathname.includes('/maps/'))));
+    const dest=isMaps?saved:'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(pdfPlace(stop));
     const links=[{text:'［點我開啟 Google Maps］',link:dest,color:'#176d61',decoration:'underline'}];
+    if(saved&&!isMaps)links.push({text:'　［景點網站］',link:saved,color:'#176d61',decoration:'underline'});
     if(index+1<stops.length){
      const next=stops[index+1];
      const nav='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(pdfPlace(stop))+'&destination='+encodeURIComponent(pdfPlace(next))+'&travelmode=transit';
