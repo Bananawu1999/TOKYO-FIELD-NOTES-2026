@@ -587,8 +587,11 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
   const item={time:$('sheetTime').value.trim()||'未定',title,desc:$('sheetDesc').value.trim(),url};
   const date=editingStop?.date||days[active].date;
   if(!editingStop){
-   const list=getCustomEvents();list[date]=list[date]||[];list[date].push(item);
+   const list=getCustomEvents();list[date]=list[date]||[];
+   const newId='custom-'+list[date].length;
+   list[date].push(item);
    localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(list));
+   insertNewStopByTime(date,sourceRef(date,newId));
   }else if(editingStop.id.startsWith('base-')){
    const edit=getEventEdits();edit[date]={...(edit[date]||{}),[editingStop.id]:item};
    localStorage.setItem('tokyo_field_event_edits_v1',JSON.stringify(edit));
@@ -639,6 +642,37 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
  }
  function dayStops(date){const b=boardForAllDays();return b.order[date].map(ref=>b.refs[ref]).filter(Boolean)}
  function storeBoard(board){localStorage.setItem(orderKey,JSON.stringify(board))}
+
+ // Keep manually dragged stops in their chosen relative order. Only place the NEW
+ // stop at the appropriate clock-time boundary; the user can still drag it afterward.
+ function stopStartMinute(value){
+  const raw=String(value||'').trim();
+  if(!raw||raw==='未定')return null;
+  const found=raw.match(/(?:^|[^0-9])([01]?\d|2[0-3]):([0-5]\d)(?!\d)/);
+  if(!found)return null;
+  return Number(found[1])*60+Number(found[2]);
+ }
+ function insertNewStopByTime(date,ref){
+  const data=boardForAllDays();
+  const newStop=data.refs[ref];
+  if(!newStop)return;
+  const board=data.order;
+  // Remove any accidental duplicate before assigning its explicit position.
+  for(const day of days)board[day.date]=board[day.date].filter(x=>x!==ref);
+  const list=board[date]||[];
+  const minute=stopStartMinute(newStop.time);
+  let insertAt=list.length;
+  if(minute!==null){
+   for(let i=0;i<list.length;i++){
+    const current=stopStartMinute(data.refs[list[i]]?.time);
+    if(current===null||current>minute){insertAt=i;break}
+   }
+  }
+  list.splice(insertAt,0,ref);
+  board[date]=list;
+  storeBoard(board);
+ }
+
  function escapeAttribute(value){return esc(String(value))}
  let moveGesture=null,edgeTimer=null;
  const dragToast=document.createElement('div');dragToast.className='drag-day-toast';dragToast.hidden=true;
@@ -761,7 +795,7 @@ renderNav();renderDay();renderChecks();renderExpenses();renderStats();
  };
  function cleanUrl(value){if(!value)return '';try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:''}catch(e){return ''}}
  function safeHref(value){return cleanUrl(value)||'#'}
- $('addCustomStop').onclick=async()=>{const title=$('customTitle').value.trim();if(!title){notify('請輸入景點／活動名稱');return}const url=cleanUrl($('customUrl').value.trim());if($('customUrl').value.trim()&&!url){notify('網址請使用 http:// 或 https://');return}const all=getCustomEvents();all[days[active].date]=all[days[active].date]||[];all[days[active].date].push({time:$('customTime').value.trim()||'未定',title,desc:$('customDesc').value.trim(),url});localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(all));$('customTime').value='';$('customTitle').value='';$('customDesc').value='';$('customUrl').value='';window.renderDay();notify(editNotice())};
+ $('addCustomStop').onclick=async()=>{const title=$('customTitle').value.trim();if(!title){notify('請輸入景點／活動名稱');return}const url=cleanUrl($('customUrl').value.trim());if($('customUrl').value.trim()&&!url){notify('網址請使用 http:// 或 https://');return}const all=getCustomEvents();all[days[active].date]=all[days[active].date]||[];const date=days[active].date,newId='custom-'+all[date].length;all[date].push({time:$('customTime').value.trim()||'未定',title,desc:$('customDesc').value.trim(),url});localStorage.setItem('tokyo_field_custom_events_v1',JSON.stringify(all));insertNewStopByTime(date,sourceRef(date,newId));$('customTime').value='';$('customTitle').value='';$('customDesc').value='';$('customUrl').value='';window.renderDay();notify(editNotice())};
 
  controls();window.renderDay();setTimeout(connect,300);
 })();
