@@ -110,6 +110,18 @@
 @media (min-width:700px){#tripEditor{align-items:center}}
 
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+.daily-route{margin-top:20px;padding:16px;border-radius:16px;border:1px solid #dce6dd;background:#f8faf6}
+.daily-route h3{margin:2px 0 6px;font-size:18px}.daily-route p{margin:0 0 12px;font-size:12px;color:var(--muted)}
+#dailyRouteMap{height:280px;width:100%;border-radius:12px;overflow:hidden;background:#e5eee6}
+.route-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.route-tab{padding:7px 11px;border-radius:99px;border:1px solid #bdd0c1;color:var(--green);background:white;font-size:12px;font-weight:750}.route-tab.active{background:var(--green);color:white}
+.route-list{display:grid;gap:8px}.route-row{border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px;display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.route-row b{font-size:13px}.route-row small{display:block;color:var(--muted);margin-top:3px;font-size:11px}.route-row a{padding:7px 9px;border-radius:8px;border:1px solid #cadbd0;text-decoration:none;color:var(--green);white-space:nowrap;font-size:11px;font-weight:800}
+.route-note{font-size:11px;color:var(--muted);margin-top:9px}.map-pin{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#355b49;border:2px solid white;color:white;font-weight:bold;box-shadow:0 1px 5px #0004}
+@media(max-width:480px){.daily-route{padding:12px}#dailyRouteMap{height:240px}}
+</style>
 </head>
 <body>
 <div class="app">
@@ -148,6 +160,7 @@
       <button type="button" id="quickAddStop">＋ 新增景點</button><div class="timeline" id="timeline"></div>
       <div class="stopform"><h3>＋ 新增景點</h3><div class="stopgrid"><input id="customTime" placeholder="時間，例如 15:30"><input id="customTitle" placeholder="景點名稱（必填）"><input id="customUrl" placeholder="地圖／資訊網址（選填）"><textarea id="customDesc" rows="2" placeholder="景點備註、交通或集合提醒"></textarea></div><div class="stopcontrols"><button class="btn primary" id="addCustomStop">新增景點</button><span class="sub">可以直接新增、編輯與刪除景點；未設定雲端時只保存在目前裝置。</span></div></div>
       <div class="note" id="dayNote"></div>
+<section class="daily-route" id="dailyRoute"><div class="kicker">DAY ROUTE MAP</div><h3>今日搭車與逛街路線</h3><p id="routeCaption"></p><div id="dailyRouteMap">地圖載入中，仍可使用下方 Google Maps 導航。</div><div id="routeTabs" class="route-tabs"></div><div id="routeList" class="route-list"></div><div class="route-note">地圖虛線僅表示景點間的先後位置，不是實際道路或車班。請點「Google Maps 導航」確認當天路線與交通時間。</div></section>
     </section>
     <section class="panel" id="checklist">
       <div class="panelhead"><div><div class="kicker">BEFORE YOU GO</div><h2>出發前待辦</h2><div class="sub">勾選狀態會保存在目前瀏覽器</div></div><span class="tag" id="checkPill">0% 完成</span></div>
@@ -218,7 +231,57 @@ document.addEventListener('visibilitychange',()=>{
 function save(){localStorage.setItem("tokyo_field_checks_v1",JSON.stringify(checks));localStorage.setItem("tokyo_field_expenses_v1",JSON.stringify(expenses))}
 function notify(s){let t=document.getElementById("toast");t.textContent=s;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1600)}
 function renderNav(){document.getElementById("dayNav").innerHTML=days.map((d,i)=>`<button class="daybtn ${i===active?"active":""}" data-day="${i}"><span class="daydate">${d.date}</span><span class="dayinfo"><strong>DAY 0${i+1}</strong><small>${d.pill}</small></span></button>`).join("");document.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{active=Number(b.dataset.day);renderNav();renderDay();document.getElementById("expenseDay").value=days[active].date;centerSelectedDay()});centerSelectedDay()}
-function renderDay(){let d=days[active];document.getElementById("dayEyebrow").textContent=`DAY 0${active+1} · ${d.dow}`;document.getElementById("dayTitle").textContent=d.title;document.getElementById("daySub").textContent=d.sub;document.getElementById("dayPill").textContent=d.pill;document.getElementById("dayNote").innerHTML=d.note+` <a target="_blank" rel="noopener" href="${dailyRouteLinks[d.date]}" style="color:#315542;font-weight:800;white-space:nowrap">開啟當日景點路線 ↗</a>`;document.getElementById("timeline").innerHTML=d.events.map(e=>`<div class="event"><div class="etime">${e[0]}</div><div class="rail"><span class="dot"></span></div><div class="eventbody"><div class="eventtop"><div><h3>${e[1]}</h3><p>${e[2]}</p></div></div><div class="eventlinks"><a class="minilink" target="_blank" rel="noopener" href="${e[3]}">查看地圖／資訊 ↗</a></div></div></div>`).join("")}
+function renderDay(){let d=days[active];document.getElementById("dayEyebrow").textContent=`DAY 0${active+1} · ${d.dow}`;document.getElementById("dayTitle").textContent=d.title;document.getElementById("daySub").textContent=d.sub;document.getElementById("dayPill").textContent=d.pill;document.getElementById("dayNote").innerHTML=d.note+` <a target="_blank" rel="noopener" href="${dailyRouteLinks[d.date]}" style="color:#315542;font-weight:800;white-space:nowrap">開啟當日景點路線 ↗</a>`;document.getElementById("timeline").innerHTML=d.events.map(e=>`<div class="event"><div class="etime">${e[0]}</div><div class="rail"><span class="dot"></span></div><div class="eventbody"><div class="eventtop"><div><h3>${e[1]}</h3><p>${e[2]}</p></div></div><div class="eventlinks"><a class="minilink" target="_blank" rel="noopener" href="${e[3]}">查看地圖／資訊 ↗</a></div></div></div>`).join("");showDailyRoute()}
+
+const ROUTE_POINTS={"hotel":["Hotel QUEEN ANNEX",35.6905,139.7059],"haneda":["羽田機場",35.5494,139.7798],"isetan":["一保堂・伊勢丹",35.6914,139.7042],"disney":["迪士尼旗艦店",35.6928,139.7037],"kiddy":["KIDDY LAND",35.6938,139.7025],"lumine":["LUMINE EST / HARE",35.6924,139.7012],"ramen":["金色不如歸",35.6883,139.7093],"hanazono":["花園神社",35.6944,139.706],"cat":["3D 貓咪",35.6929,139.7006],"godzilla":["哥吉拉",35.6957,139.7025],"smbc":["三井住友銀行新宿西口支店",35.6898,139.6987],"arakura":["新倉山淺間公園",35.4999,138.8018],"popura":["四季之宿 Popura",35.5172,138.7646],"ubuyagasaki":["產屋崎・逆富士",35.5227,138.7569],"kawaguchiko":["河口湖站",35.498,138.7686],"shinjuku":["新宿站",35.6909,139.7003],"shibapark":["芝公園",35.6551,139.7475],"tower":["東京鐵塔",35.6586,139.7454],"imahan":["人形町今半銀座店",35.6695,139.7622],"kamakura":["鎌倉站",35.319,139.5506],"hachimangu":["鶴岡八幡宮",35.3261,139.5564],"komachi":["小町通",35.3218,139.5532],"hase":["長谷站",35.311,139.5365],"hasedera":["長谷寺",35.3111,139.5338],"buddha":["鎌倉大佛",35.3167,139.5357],"ginkgo":["神宮外苑銀杏大道",35.6743,139.7172],"harajuku":["原宿站",35.6702,139.7027],"takeshita":["竹下通",35.6716,139.7044],"maisen":["邁泉青山本店",35.6672,139.7108],"omotesando":["表參道",35.6654,139.7126],"pokemon":["寶可夢中心 澀谷PARCO",35.662,139.6989],"uniqlo":["UNIQLO 澀谷道玄坂",35.6595,139.6973]};
+const ROUTE_LEGS={"11/17":[["搭車","羽田機場 → 飯店寄放行李","haneda hotel","transit"],["步行","下午新宿購物路線","isetan disney kiddy lumine","walking"],["步行","17:30 領券、金色不如歸晚餐","lumine ramen","walking"],["步行","花園神社、3D 貓咪、哥吉拉夜景","ramen hanazono cat godzilla","walking"]],"11/18":[["搭車","飯店 → 07:50 新宿西口集合點","hotel smbc","transit"],["跟團","KKday 富士山一日遊（離團須同意）","smbc arakura","driving"],["搭車","新倉山淺間公園 → Popura（交通待確認）","arakura popura","transit"]],"11/19":[["搭車","逆富士 → 河口湖站","ubuyagasaki kawaguchiko","driving"],["搭車","河口湖站 → 新宿（16:00 放行李為目標）","kawaguchiko shinjuku","transit"],["搭車","新宿 → 芝公園","shinjuku shibapark","transit"],["步行","芝公園 → 東京鐵塔外部看夜景","shibapark tower","walking"],["搭車","東京鐵塔 → 銀座今半晚餐","tower imahan","transit"]],"11/20":[["搭車","新宿 JR → 鎌倉站","shinjuku kamakura","transit"],["步行","鶴岡八幡宮、御朱印、小町通","kamakura hachimangu komachi","walking"],["搭車","江之電：鎌倉站 → 長谷站","kamakura hase","transit"],["步行","長谷寺 → 鎌倉大佛","hase hasedera buddha","walking"],["搭車","江之電、JR 返回新宿","hase kamakura shinjuku","transit"]],"11/21":[["搭車","新宿 → 神宮外苑銀杏大道","shinjuku ginkgo","transit"],["搭車","銀杏大道 → 原宿","ginkgo harajuku","transit"],["步行","竹下通 → 邁泉豬排青山本店","harajuku takeshita maisen","walking"],["步行","表參道購物 → 澀谷寶可夢中心","maisen omotesando pokemon","walking"],["步行","澀谷PARCO → UNIQLO 道玄坂","pokemon uniqlo","walking"]],"11/22":[["搭車","新宿 → 羽田機場（目標08:00到）","shinjuku haneda","transit"]]};
+let routeMap=null,routeLayer=null,routeMode='全部';
+function routeNavUrl(leg){
+ const ids=leg[2].split(' '), names=ids.map(k=>encodeURIComponent(ROUTE_POINTS[k][0]));
+ let u='https://www.google.com/maps/dir/?api=1&origin='+names[0]+'&destination='+names[names.length-1]+'&travelmode='+leg[3];
+ if(names.length>2)u+='&waypoints='+names.slice(1,-1).join('%7C');
+ return u;
+}
+function showDailyRoute(){
+ const date=days[active].date,all=ROUTE_LEGS[date]||[],tabs=document.getElementById('routeTabs'),list=document.getElementById('routeList');
+ if(!tabs||!list)return;
+ document.getElementById('routeCaption').textContent=days[active].title+'｜點選交通方式，查看路線及導航。';
+ const modes=['全部',...new Set(all.map(l=>l[0]))];
+ if(!modes.includes(routeMode))routeMode='全部';
+ tabs.replaceChildren();list.replaceChildren();
+ for(const mode of modes){const b=document.createElement('button');b.type='button';b.className='route-tab'+(mode===routeMode?' active':'');b.textContent=mode;b.onclick=()=>{routeMode=mode;showDailyRoute()};tabs.append(b)}
+ const selection=all.filter(l=>routeMode==='全部'||l[0]===routeMode);
+ selection.forEach((leg,i)=>{
+  const div=document.createElement('div');div.className='route-row';
+  const info=document.createElement('div'),title=document.createElement('b'),hint=document.createElement('small');
+  title.textContent=(i+1)+'. '+(leg[0]==='步行'?'🚶 ':leg[0]==='跟團'?'🚌 ':'🚆 ')+leg[1];
+  hint.textContent=leg[2].split(' ').map(k=>ROUTE_POINTS[k][0]).join(' → ');
+  info.append(title,hint);
+  const a=document.createElement('a');a.textContent='Google Maps 導航 ↗';a.href=routeNavUrl(leg);a.target='_blank';a.rel='noopener';
+  div.append(info,a);list.append(div);
+ });
+ const holder=document.getElementById('dailyRouteMap');
+ if(!window.L){holder.textContent='互動地圖暫時無法載入；下方仍可點選 Google Maps 導航。';return}
+ if(!routeMap){
+  holder.replaceChildren();routeMap=L.map(holder,{scrollWheelZoom:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:19}).addTo(routeMap);
+ }
+ if(routeLayer)routeMap.removeLayer(routeLayer);
+ routeLayer=L.featureGroup().addTo(routeMap);
+ const seen=new Set(),colors={'搭車':'#5072ad','步行':'#3c815c','跟團':'#bd893e'};
+ for(const leg of selection){
+  const ids=leg[2].split(' '),positions=ids.map(id=>ROUTE_POINTS[id].slice(1));
+  L.polyline(positions,{color:colors[leg[0]],weight:3,dashArray:'5 7',opacity:.8}).addTo(routeLayer);
+  for(const id of ids){
+   if(seen.has(id))continue;
+   seen.add(id);const p=ROUTE_POINTS[id],n=seen.size;
+   L.marker([p[1],p[2]],{icon:L.divIcon({className:'',html:'<span class="map-pin">'+n+'</span>',iconSize:[26,26],iconAnchor:[13,13]})}).bindPopup(p[0]).addTo(routeLayer);
+  }
+ }
+ if(routeLayer.getLayers().length)routeMap.fitBounds(routeLayer.getBounds(),{padding:[25,25],maxZoom:14});
+ requestAnimationFrame(()=>routeMap&&routeMap.invalidateSize());
+}
+
 function renderChecks(){document.getElementById("checkItems").innerHTML=checklist.map((s,i)=>`<div class="checkrow ${checks[i]?"done":""}"><input type="checkbox" id="check${i}" data-check="${i}" ${checks[i]?"checked":""}><label for="check${i}">${s}</label></div>`).join("");document.querySelectorAll("[data-check]").forEach(c=>c.onchange=()=>{checks[c.dataset.check]=c.checked;save();renderChecks();renderStats()});let n=checklist.filter((_,i)=>checks[i]).length;document.getElementById("checkPill").textContent=Math.round(n/checklist.length*100)+"% 完成";document.getElementById("progressBar").style.width=n/checklist.length*100+"%"}
 function money(n){return "¥"+Number(n).toLocaleString("ja-JP")}
 function renderExpenses(){let total=expenses.reduce((s,e)=>s+Number(e.amount),0);document.getElementById("expenseList").innerHTML=expenses.length?expenses.slice().reverse().map(e=>`<div class="expense"><div><strong>${esc(e.name)}</strong><small>${e.day}</small></div><div class="right"><strong>${money(e.amount)}</strong><button class="delete" data-delete="${e.id}">刪除</button></div></div>`).join(""):'<div class="empty">還沒有花費紀錄。記下第一筆花費吧。</div>';document.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>{expenses=expenses.filter(e=>e.id!==b.dataset.delete);save();renderExpenses();renderStats();notify("已刪除花費")});document.getElementById("expenseStat").textContent=money(total)}
