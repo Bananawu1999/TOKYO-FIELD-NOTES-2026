@@ -182,7 +182,7 @@ body.is-itinerary-dragging{user-select:none;-webkit-user-select:none}
       <button type="button" id="quickAddStop">＋ 新增景點</button><div class="drag-instruction">☷ 按住景點左側把手上下拖曳排序；拖往螢幕左／右側可移到其他日期。移動後請檢查原訂時間。</div><div class="timeline" id="timeline"></div>
       <div class="stopform"><h3>＋ 新增景點</h3><div class="stopgrid"><input id="customTime" placeholder="時間，例如 15:30"><input id="customTitle" placeholder="景點名稱（必填）"><input id="customUrl" placeholder="地圖／資訊網址（選填）"><textarea id="customDesc" rows="2" placeholder="景點備註、交通或集合提醒"></textarea></div><div class="stopcontrols"><button class="btn primary" id="addCustomStop">新增景點</button><span class="sub">可以直接新增、編輯與刪除景點；未設定雲端時只保存在目前裝置。</span></div></div>
       <div class="note" id="dayNote"></div>
-<section class="daily-route" id="dailyRoute"><div class="kicker">DAY ROUTE MAP</div><h3>今日搭車與逛街路線</h3><p id="routeCaption"></p><div id="dailyRouteMap">地圖載入中，仍可使用下方 Google Maps 導航。</div><div id="routeTabs" class="route-tabs"></div><div id="routeList" class="route-list"></div><div class="route-note">地圖虛線僅表示景點間的先後位置，不是實際道路或車班。請點「Google Maps 導航」確認當天路線與交通時間。</div></section>
+<section class="daily-route" id="dailyRoute"><div class="kicker">DAY ROUTE MAP</div><h3>今日搭車與逛街路線</h3><a id="routeWhole" class="minilink" target="_blank" rel="noopener" href="#" style="margin:4px 0 12px">開啟當天 Google Maps 路線 ↗</a><p id="routeCaption"></p><div id="dailyRouteMap">地圖載入中，仍可使用下方 Google Maps 導航。</div><div id="routeTabs" class="route-tabs"></div><div id="routeList" class="route-list"></div><div class="route-note">地圖虛線僅表示景點間的先後位置，不是實際道路或車班。請點「Google Maps 導航」確認當天路線與交通時間。</div></section>
     </section>
     <section class="panel" id="checklist">
       <div class="panelhead"><div><div class="kicker">BEFORE YOU GO</div><h2>出發前待辦</h2><div class="sub">勾選狀態會保存在目前瀏覽器</div></div><span class="tag" id="checkPill">0% 完成</span></div>
@@ -369,6 +369,7 @@ function showDailyRoute(){
   const places=live.slice(1,-1).slice(0,7).map(search);
   const url='https://www.google.com/maps/dir/?api=1&origin='+search(first)+'&destination='+search(last)+'&travelmode=transit'+(places.length?'&waypoints='+places.join('%7C'):'');
   const whole=document.getElementById('routeWhole');if(whole)whole.href=url;
+  const topLink=document.querySelector('#dayNote a');if(topLink)topLink.href=url;
  }
  selection.forEach((leg,i)=>{
   const div=document.createElement('div');div.className='route-row';
@@ -409,7 +410,7 @@ function renderExpenses(){let total=expenses.reduce((s,e)=>s+Number(e.amount),0)
 function renderStats(){let n=checklist.filter((_,i)=>checks[i]).length;document.getElementById("checkStat").textContent=`${n} / ${checklist.length}`;document.getElementById("expenseStat").textContent=money(expenses.reduce((s,e)=>s+Number(e.amount),0))}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 document.getElementById("addExpense").onclick=()=>{let name=document.getElementById("expenseName").value.trim(),amount=Number(document.getElementById("expenseAmount").value),day=document.getElementById("expenseDay").value;if(!name||!Number.isFinite(amount)||amount<=0){notify("請輸入項目與有效金額");return}expenses.push({id:String(Date.now())+Math.random().toString(16).slice(2),name,amount,day});save();document.getElementById("expenseName").value="";document.getElementById("expenseAmount").value="";renderExpenses();renderStats();notify("已新增花費")};
-document.getElementById("exportBtn").onclick=()=>{let data={app:"TOKYO FIELD NOTES 2026",tripDates:"2026-11-17/2026-11-22",checks,expenses,customEvents:JSON.parse(localStorage.getItem("tokyo_field_custom_events_v1")||"{}"),eventEdits:JSON.parse(localStorage.getItem("tokyo_field_event_edits_v1")||"{}"),deletedBase:JSON.parse(localStorage.getItem("tokyo_field_deleted_base_v1")||"{}"),exportedAt:new Date().toISOString()};let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="tokyo-field-notes-backup.json";a.click();URL.revokeObjectURL(url);notify("已匯出備份檔")};
+document.getElementById("exportBtn").onclick=()=>{let data={app:"TOKYO FIELD NOTES 2026",tripDates:"2026-11-17/2026-11-22",checks,expenses,customEvents:JSON.parse(localStorage.getItem("tokyo_field_custom_events_v1")||"{}"),eventEdits:JSON.parse(localStorage.getItem("tokyo_field_event_edits_v1")||"{}"),deletedBase:JSON.parse(localStorage.getItem("tokyo_field_deleted_base_v1")||"{}"),routeOrder:JSON.parse(localStorage.getItem("tokyo_field_route_order_v1")||"{}"),exportedAt:new Date().toISOString()};let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="tokyo-field-notes-backup.json";a.click();URL.revokeObjectURL(url);notify("已匯出備份檔")};
 renderNav();renderDay();renderChecks();renderExpenses();renderStats();
 </script>
 
