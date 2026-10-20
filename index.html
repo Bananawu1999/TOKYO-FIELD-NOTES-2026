@@ -359,6 +359,12 @@ async function drainRouteGeocode(){
 
 function getFullRouteLegs(date){
  const live=window.routeLiveStops?.[date];
+ // The Nov 19 night route is a curated chain of real places. Generic travel
+ // cards must not replace it with geocoded phrases or saved old card ordering.
+ // Keep editable/custom stops available via the live-route renderer on other days.
+ if(date==='11/19'&&live?.some(s=>String(s.title).includes('花園神社'))&&live?.some(s=>String(s.title).includes('淺草寺'))){
+  return ROUTE_LEGS[date]||[];
+ }
  if(!live)return ROUTE_LEGS[date]||[];
  const markers=[];
  const normalize=s=>String(s||'').toLowerCase().replace(/\s/g,'');
@@ -405,7 +411,13 @@ function showDailyRoute(){
  for(const mode of modes){const b=document.createElement('button');b.type='button';b.className='route-tab'+(mode===routeMode?' active':'');b.textContent=mode;b.onclick=()=>{routeMode=mode;showDailyRoute()};tabs.append(b)}
  const selection=all.filter(l=>routeMode==='全部'||l[0]===routeMode);
  const live=window.routeLiveStops?.[date];
- if(live?.length>1){
+ const curatedNight=date==='11/19'&&all.some(l=>l[2]==='hanazono sensoji');
+ if(curatedNight){
+  const whole=document.getElementById('routeWhole');
+  if(whole)whole.href='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent('人形町今半 銀座店')+'&destination='+encodeURIComponent('Skytree Tatami Hotel 東京都墨田区業平4-16-6')+'&waypoints='+encodeURIComponent('花園神社 新宿|浅草寺 台東区')+'&travelmode=transit';
+  const topLink=document.querySelector('#dayNote a');if(topLink&&whole)topLink.href=whole.href;
+ }
+ if(!curatedNight&&live?.length>1){
   const first=live[0],last=live[live.length-1];
   const search=s=>encodeURIComponent(routeTextPlace(s));
   const places=live.slice(1,-1).slice(0,7).map(search);
