@@ -362,7 +362,7 @@ function getFullRouteLegs(date){
  // The Nov 19 night route is a curated chain of real places. Generic travel
  // cards must not replace it with geocoded phrases or saved old card ordering.
  // Keep editable/custom stops available via the live-route renderer on other days.
- if(date==='11/19'&&live?.some(s=>String(s.title).includes('花園神社'))&&live?.some(s=>String(s.title).includes('淺草寺'))){
+ if(date==='11/19'){
   return ROUTE_LEGS[date]||[];
  }
  if(!live)return ROUTE_LEGS[date]||[];
